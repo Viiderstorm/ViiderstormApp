@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Viiderstorm</title>
+
+    <!-- Viewport mobile tag for sensible mobile support -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    
+    <!--  
+        Stylesheets and Preprocessors
+        ==============================
+
+        You can always bring in CSS files manually with `<link>` tags, or asynchronously
+        using a solution like AMD (RequireJS).  Or, if you like, you can take advantage 
+        of Sails' conventional asset pipeline (boilerplate Gruntfile).
+
+        By default, stylesheets from your `assets/styles` folder are included
+        here automatically (between STYLES and STYLES END). Both CSS (.css) and LESS (.less)
+        are supported. In production, your styles will be minified and concatenated into
+        a single file.
+        
+        To customize any part of the built-in behavior, just edit `tasks/pipeline.js`.
+        For example, here are a few things you could do:
+            
+            + Change the order of your CSS files
+            + Import stylesheets from other directories
+            + Use a different or additional preprocessor, like SASS, SCSS or Stylus
+    -->
+
+    <!--STYLES-->
+    <link rel="stylesheet" href="/styles/importer.css">
+    <link rel="stylesheet" href="/styles/page_styles.css">
+    <link rel="stylesheet" href="/styles/semantic.css">
+    <!--STYLES END-->
+    
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,300|Gruppo|Poiret+One|Exo+2:400,200|Alegreya+Sans:400,300' rel='stylesheet' type='text/css'>
+    <script data-main="/js/dependencies/main" src="/js/dependencies/require.js"></script>
+  </head>
+
+  <body id="main-body">
+    <div class="ui thin sidebar visible inverted vertical menu" style="color:white;background:#333333">
+            <a class="item" href="/" style="font-family:'Poiret One', cursive; font-size:150%">Viiderstorm</a>
+            <div class="item">
+                <div class="header" style="color: white;">
+                    Assignments
+                </div>
+                <div class="menu">
+                    <a class="item" href="/assignments/checkpoint1"> Checkpoint 1</a>
+                    <strike><a class="item"> Checkpoint 2</a></strike>
+                    <strike><a class="item"> Checkpoint 3</a></strike>
+                    <strike><a class="item"> Checkpoint 4</a></strike>
+                    <strike><a class="item"> Checkpoint 5</a></strike>
+                    <strike><a class="item"> Checkpoint 6</a></strike>
+                </div>
+            </div>
+            <div class="item">
+                <div class="header">
+                    Project
+                </div>
+                <div class="menu">
+                    <a class="item" href="/project/proposal"> Proposal </a>
+                    <strike><a class="item"> Mid-Term Presentation </a></strike>
+                    <strike><a class="item"> Final Presentation </a></strike>
+                </div>
+            </div>
+            <div class="item">
+                <div class="header">
+                    Other Resources
+                </div>
+                <div class="menu">
+                    <a class="item" href="/me/about"> About </a>
+                </div>
+            </div>
+    </div>
+    <div id="content-div-background" class="pusher">
+        <div  class="ui stackable grid container">
+        
+            <div class="sixteen wide column">
+                <%- body %>
+            </div>
+        
+        </div>
+
+        <!--
+            Client-side Templates
+            ========================
+
+            HTML templates are important prerequisites of modern, rich client applications.
+            To work their magic, frameworks like Backbone, Angular, Ember, and Knockout require
+            that you load these templates client-side.
+
+            By default, your Gruntfile is configured to automatically load and precompile
+            client-side JST templates in your `assets/templates` folder, then
+            include them here automatically (between TEMPLATES and TEMPLATES END).
+            
+            To customize this behavior to fit your needs, just edit `tasks/pipeline.js`.
+            For example, here are a few things you could do:
+
+                + Import templates from other directories
+                + Use a different template engine (handlebars, jade, dust, etc.)
+                + Internationalize your client-side templates using a server-side
+                stringfile before they're served.
+        -->
+
+        <!--TEMPLATES-->
+        
+        <!--TEMPLATES END-->
+
+
+        <!--
+
+        Client-side Javascript
+        ========================
+
+        You can always bring in JS files manually with `script` tags, or asynchronously
+        on the client using a solution like AMD (RequireJS).  Or, if you like, you can 
+        take advantage of Sails' conventional asset pipeline (boilerplate Gruntfile).
+
+        By default, files in your `assets/js` folder are included here
+        automatically (between SCRIPTS and SCRIPTS END).  Both JavaScript (.js) and
+        CoffeeScript (.coffee) are supported. In production, your scripts will be minified
+        and concatenated into a single file.
+        
+        To customize any part of the built-in behavior, just edit `tasks/pipeline.js`.
+        For example, here are a few things you could do:
+            
+            + Change the order of your scripts
+            + Import scripts from other directories
+            + Use a different preprocessor, like TypeScript
+
+        -->
+    </div>
+
+    <div class="ui inverted vertical footer segment form-page" style="color:white;background:#2F2F2F">
+        <div class="ui center aligned container">
+            <h1 style="font-family: 'Poiret One', cursive; font-size:150%">Viiderstorm</h1>
+            <div>
+                Hosted at <a href="https://asmallorange.com/" target="_blank">A Small Orange</a>
+            </div>
+        </div>
+    </div>
+    
+  </body>
+</html>

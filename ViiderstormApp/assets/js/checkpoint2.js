@@ -140,22 +140,47 @@ function generateRays(camera, frame){
 
 
 function findIntersection(ray, geometries){
+    
+    var intersections = [];
+    
     for(var i = 0; i < geometries.length; i++){
-        if(geometries[i].geometry instanceof THREE.SphereGeometry){
-            if(checkSphereIntersection(ray, geometries[i])){
-                return geometries[i];
-            }
-        }
-//        if(geometries[i].geometry instanceof THREE.PlaneGeometry){
-//            if(checkPlaneIntersection(ray, geometries[i])){
-//                return geometries[i];
-//            }
-//        }
+       if(geometries[i].geometry instanceof THREE.SphereGeometry){
+           var intersectPoint = getSphereIntersection(ray, geometries[i]);
+           if(intersectPoint != null){
+               intersections.push({
+                   geometry: geometries[i],
+                   intersection: intersectPoint
+               });
+           }
+       }
+       if(geometries[i].geometry instanceof THREE.PlaneGeometry){
+           var intersectPoint = getPlaneIntersection(ray, geometries[i]);
+           if(intersectPoint != null){
+               intersections.push({
+                   geometry: geometries[i],
+                   intersection: intersectPoint
+               });
+           }
+       }
     }
-    return null;
+    
+    var closestIntersectionDistance = 99999;
+    var closestGeometry = null;
+    for(var i = 0; i < intersections.length; i++){
+        
+        var distance = intersections[i].intersection.clone().sub(ray.origin).length();
+        if(distance < closestIntersectionDistance){
+            closestIntersectionDistance = distance;
+            closestGeometry = intersections[i].geometry;
+        }
+        
+    }
+    
+    return closestGeometry;
+    
 }
 
-function checkSphereIntersection(ray, sphere){
+function getSphereIntersection(ray, sphere){
     
     var dx = ray.direction.x;
     var dy = ray.direction.y;
@@ -181,25 +206,45 @@ function checkSphereIntersection(ray, sphere){
     var W = W1 > 0 ? W1 : W2;
     
     if(W >= 0){
-        return true;
+        return ray.origin.clone().add(ray.direction.clone().multiplyScalar(W));
     }
     
-    return false;
+    return null;
     
 }
 
-function checkPlaneIntersection(ray, plane){
+function getPlaneIntersection(ray, plane){
     
+    var pointOnPlace = plane.geometry.vertices[0];
     var normal = plane.geometry.faces[0].normal;
-    var F = new THREE.Vector3(0,0,0).distanceTo(plane.position);
-    var W = (-(normal.clone().dot(plane.position) + F)) / (normal.dot(ray.direction));
+    var f = normal.dot(pointOnPlace.clone().sub(new THREE.Vector3(0,0,0))) / normal.length();
+    var denom = normal.dot(ray.direction)
+    var W = ((normal.dot(pointOnPlace)+f) / denom)
     
     if(W > 0){
-        return true;
+        return ray.origin.clone().add(ray.direction.clone().multiplyScalar(W));
     }
-    return false;
+    
+    return null;
     
 }
+
+function getPolygonIntersection(ray, plane){
+    
+    
+}
+
+
+function getNormalOfPlane(plane){
+    var v1 = plane.geometry.vertices[plane.geometry.faces[0].a].applyMatrix4(new THREE.Matrix4().makeRotationX(plane.rotation.x));
+    var v2 = plane.geometry.vertices[plane.geometry.faces[0].b].applyMatrix4(new THREE.Matrix4().makeRotationX(plane.rotation.x));
+    var v3 = plane.geometry.vertices[plane.geometry.faces[0].c].applyMatrix4(new THREE.Matrix4().makeRotationX(plane.rotation.x));
+    
+    var normal = (v2.clone().sub(v1).cross(v3.clone().sub(v1))).normalize();
+    return normal;
+    
+}
+
 /* Exists already in THREE.js for Vector3 */
 function getAngleBetweenVectors(vect1, vect2){
     
@@ -216,12 +261,12 @@ function radianToDegree(rad){
 var scene = new THREE.Scene();
 var renderer = new THREE.WebGLRenderer({ antialias: true });
 //var img = document.getElementById("render_image");
-//renderer.setSize( img.clientWidth, img.clientHeight );
+renderer.setSize( 400, 400 );
 document.getElementById("WebGLCanvas").appendChild(renderer.domElement);
 
-var material1 = new THREE.MeshPhongMaterial({color:0x2194ce});
-var material2 = new THREE.MeshPhongMaterial({color:0x4FF5ff});
-var material3 = new THREE.MeshPhongMaterial({color:0xff0055});
+var material1 = new THREE.MeshBasicMaterial({color:0x2194ce});
+var material2 = new THREE.MeshBasicMaterial({color:0x4FF5ff});
+var material3 = new THREE.MeshBasicMaterial({color:0xff0055});
 
 //camera
 var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000);
@@ -233,7 +278,7 @@ light.position.set(1,1,4);
 //plane
 var planeGeometry = new THREE.PlaneGeometry(4,8);
 var plane = new THREE.Mesh(planeGeometry, material1);
-plane.rotation.x += 4.8;
+plane.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(4.8));
 
 //sphere 1
 var sphere1Geometry = new THREE.SphereGeometry(0.5,50,50);
@@ -244,7 +289,7 @@ var sphere2Geometry = new THREE.SphereGeometry(0.45,50,50);
 var sphere2 = new THREE.Mesh(sphere2Geometry, material3);
 
 
-var iframe = new ImageFrame(600,600,new THREE.Vector3(0,0,4));
+var iframe = new ImageFrame(400,400,new THREE.Vector3(0,0,4));
 
 scene.add(plane);
 scene.add(sphere1);
@@ -253,16 +298,23 @@ scene.add(light);
 
 sphere1.position.set(0,0.1,2);
 sphere2.position.set(-0.75,-0.3,1);
-plane.position.set(-0.5,-1,0);
+plane.geometry.applyMatrix(new THREE.Matrix4().makeTranslation(-0.5,-1,0));
 camera.position.x = 0;
 camera.position.z = 6;
 camera.position.y = 0;
 
+
+var test = new RayTracer(camera, iframe, scene);
+
 var render = function(){
     
+    
+    test.render();
+    camera.position.z = 4
+    renderer.render(scene, camera);
 }
 
-//render();
+render();
 
 window.addEventListener('resize', function(){
 

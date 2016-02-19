@@ -37,11 +37,10 @@ scene.add(sphere1);
 scene.add(sphere2);
 scene.add(light);
 
-sphere1.position.set(0.5,0.1,2);
-sphere2.position.set(-0.25,-0.3,1);
-plane.position.set(0,-1,0);
-
-camera.position.x = 0.5;
+sphere1.position.set(0,0.1,2);
+sphere2.position.set(-0.75,-0.3,1);
+plane.position.set(-0.5,-1,0);
+camera.position.x = 0;
 camera.position.z = 4;
 camera.position.y = 0;
 
@@ -87,6 +86,6 @@ window.addEventListener('resize', function(){
     renderer.setSize(img.clientHeight, img.clientWidth);
     camera.aspect = img.clientWidth/img.clientHeight;
     camera.updateProjectionMatrix();
-    camera.position = new THREE.Vector3(0.5,0,4);
+    camera.position = new THREE.Vector3(0,0,4);
     render();
 }, false)

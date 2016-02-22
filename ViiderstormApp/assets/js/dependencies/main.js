@@ -19,7 +19,10 @@ require.config(
 define('main', function(){
     
         require(['sailsio', 'jquery', 'semantic'], function(sails, $, semantic){
-            console.log("Done Loading");  
+            $(".launch.button").click(function(){
+                    $(".ui.sidebar").sidebar('toggle')
+            });
+            console.log("Done Loading");
         })
         
     }

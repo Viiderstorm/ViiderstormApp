@@ -38,9 +38,9 @@ function ImageFrame(iwidth, iheight, location) {
         return new Uint8ClampedArray(tmp);
     }
 
-    self.displayImage = function () {
+    self.displayImage = function (canvasId) {
 
-        var c = document.getElementById("renderCanvas");
+        var c = document.getElementById(canvasId);
         var ctx = c.getContext("2d");
         var imgData = ctx.createImageData(self.imageHeight, self.imageWidth);
         imgData.data.set(self.generateImageData());
@@ -94,9 +94,9 @@ function RayTracer(camera, frame, scene) {
 
     }
 
-    self.render = function () {
+    self.render = function (canvasId) {
         var imgPlane = self.traceRays();
-        imgPlane.displayImage();
+        imgPlane.displayImage(canvasId);
     }
 
 }
@@ -313,6 +313,66 @@ function getNormal(vertices) {
     return normal;
 
 }
+
+var scene = new THREE.Scene();
+
+var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
+var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
+var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+
+//camera
+var camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+
+//light
+var light = new THREE.PointLight(0xffffff, 1, 100);
+light.position.set(1, 1, 4);
+
+//plane
+var planeGeometry = new THREE.PlaneGeometry(4, 20);
+var plane = new THREE.Mesh(planeGeometry, material1);
+plane.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+
+//sphere 1
+var sphere1Geometry = new THREE.SphereGeometry(0.5, 50, 50);
+var sphere1 = new THREE.Mesh(sphere1Geometry, material2);
+
+//sphere 2
+var sphere2Geometry = new THREE.SphereGeometry(0.45, 50, 50);
+var sphere2 = new THREE.Mesh(sphere2Geometry, material3);
+
+
+var iframe = new ImageFrame(400, 400, new THREE.Vector3(0, 0, 4));
+
+
+scene.add(plane);
+scene.add(sphere1);
+scene.add(sphere2);
+scene.add(light);
+
+sphere1.position.set(0, 0.1, 2);
+sphere2.position.set(-0.75, -0.3, 1);
+plane.geometry.applyMatrix(new THREE.Matrix4().makeTranslation(-0.5, -1, 0));
+camera.position.x = 0;
+camera.position.z = 6;
+camera.position.y = 0;
+
+
+function renderImage1(canvasId){
+    
+    var test = new RayTracer(camera, iframe, scene);
+    test.render(canvasId);
+    
+}
+
+$("#renderImage1Button").click(function(event){
+    //var parentElement = $(event.toElement.parentElement);
+    $(event.toElement).remove(); //remove button
+    var canvasName = "renderCanvas";
+    //parentElement.append("<canvas id='" + canvasName +"' style='width: 400px; height:400px'></canvas>" );
+    renderImage1(canvasName);
+})
+
+
 
 /* TEST POINT IN TRIANGLE */
 function testPointInTriangle() {
@@ -645,69 +705,3 @@ function validatePlaneEquation(normal, point, intersectPoint){
     return false;
     
 }
-
-
-
-
-
-var scene = new THREE.Scene();
-var renderer = new THREE.WebGLRenderer({ antialias: true });
-//var img = document.getElementById("render_image");
-renderer.setSize(400, 400);
-document.getElementById("WebGLCanvas").appendChild(renderer.domElement);
-
-var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
-var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
-var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-
-//camera
-var camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-
-//light
-var light = new THREE.PointLight(0xffffff, 1, 100);
-light.position.set(1, 1, 4);
-
-//plane
-var planeGeometry = new THREE.PlaneGeometry(4, 20);
-var plane = new THREE.Mesh(planeGeometry, material1);
-plane.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-
-//sphere 1
-var sphere1Geometry = new THREE.SphereGeometry(0.5, 50, 50);
-var sphere1 = new THREE.Mesh(sphere1Geometry, material2);
-
-//sphere 2
-var sphere2Geometry = new THREE.SphereGeometry(0.45, 50, 50);
-var sphere2 = new THREE.Mesh(sphere2Geometry, material3);
-
-
-var iframe = new ImageFrame(400, 400, new THREE.Vector3(0, 0, 4));
-
-
-scene.add(plane);
-scene.add(sphere1);
-scene.add(sphere2);
-scene.add(light);
-
-sphere1.position.set(0, 0.1, 2);
-sphere2.position.set(-0.75, -0.3, 1);
-plane.geometry.applyMatrix(new THREE.Matrix4().makeTranslation(-0.5, -1, 0));
-camera.position.x = 0;
-camera.position.z = 6;
-camera.position.y = 0;
-
-var test = new RayTracer(camera, iframe, scene);
-
-var render = function () {
-
-
-    test.render();
-    camera.position.z = 4;
-    renderer.render(scene, camera);
-}
-
-render();
-
-window.addEventListener('resize', function () {
-
-}, false)

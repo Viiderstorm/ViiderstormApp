@@ -44,6 +44,10 @@ module.exports.routes = {
     view:  'Checkpoints/checkpoint2'
   },
   
+  '/assignments/checkpoint3':{
+    view: 'Checkpoints/checkpoint3'  
+  },
+  
   '/project/proposal':{
       view: 'Project/proposal'
   },

@@ -5,7 +5,7 @@
 // --ImagePlane - always a 2x2 grid in world coords, size of pixels per square can change, numbers of ray samples per image pixel can change 
 // --Camera
 // --View (ImagePlane and Camera)
-// Light
+// --Light
 // --Scene
 
 function RayTracer(view, scene, supersample){
@@ -476,44 +476,44 @@ function getReflection(rayIntersection, light){
 /// INIT
 
 var sc;
+var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
+var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
+var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
+
+var sphere1 = new Sphere(new THREE.Vector3(0,0.1,2), 0.5, 50,50, material2);
+var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, material3);
+var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, material1);
+var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
+
+sc = new Scene();
+sc.add(sphere1);
+sc.add(sphere2);
+sc.add(plane1);
+sc.add(light1);
 $(document).ready(function(){
     
     
-    $("#renderButton").click(function(){
+    $("#renderButtonUniform").click(function(){
         
-        var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
-        var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
-        var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-
-
-        var sphere1 = new Sphere(new THREE.Vector3(0,0.1,2), 0.5, 50,50, material2);
-        var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, material3);
-        var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, material1);
-        var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
-        //var light2  = new Light(new THREE.Vector3(-0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
-
-        sc = new Scene();
-        sc.add(sphere1);
-        sc.add(sphere2);
-        sc.add(plane1);
-        sc.add(light1);
-        //sc.add(light2);
-
-        var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-        // var view2    = new View(new THREE.Vector3(0,0,-4), new THREE.Vector3(0,0,4).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-        // var view3    = new View(new THREE.Vector3(-2,0,0), new THREE.Vector3(2,0,0).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-        // var view4    = new View(new THREE.Vector3(2,0,0), new THREE.Vector3(-2,0,0).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-
+        $("#renderButtonUniform").remove();
+        var canvas  = $("#renderCanvasUniform")
+        var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, canvas.height(), canvas.width());
+        
         var rt      = new RayTracer(view, sc);
-        // var rt2      = new RayTracer(view2, sc);
-        // var rt3      = new RayTracer(view3, sc);
-        // var rt4      = new RayTracer(view4, sc);
-        //rt.renderUniform("renderCanvas")
-        rt.renderRandom("renderCanvas", 30)
-        // rt2.renderUniform("renderCanvas2")
-        // rt3.renderUniform("renderCanvas3")
-        // rt4.renderUniform("renderCanvas4")
+        rt.renderUniform("renderCanvasUniform");
+        
+        
+    })
+    $("#renderButtonRandom").click(function(){
+        
+        $("#renderButtonRandom").remove();
+        var canvas  = $("#renderCanvasRandom")
+        var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, canvas.height(), canvas.width());
+        
+        var rt      = new RayTracer(view, sc);
+        rt.renderRandom("renderCanvasRandom", 30);
+        
         
     })
     

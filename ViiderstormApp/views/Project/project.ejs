@@ -1,0 +1,63 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Real Time Path Tracing </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Demo - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Overview</h1>
+    </div>
+    
+    <div id="WebGLCanvas">
+        <canvas width=400px height=400px>
+        </canvas>
+    </div>
+
+</div>
+
+<div class="ui divider " ></div>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+
+        varying vec3 v_position;
+
+        void main()	{
+
+            v_position  = position;
+            gl_Position = vec4( position, 1.0 );
+
+        }
+
+</script>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+        uniform sampler2D texture;
+        varying vec3 v_position;
+        
+        void main()	{         
+				gl_FragColor = vec4(1.0,1.0,1.0, 1.0);
+
+        }
+
+</script>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['/js/project.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>

@@ -501,18 +501,36 @@ function init(){
     document.getElementById("WebGLCanvas").appendChild(renderer.domElement);
     
     //camera
-    var camera = new THREE.OrthographicCamera( 1 / - 2, 1 / 2, 1 / 2, 1 / - 2, 1, 1000 );
+    var camera = new THREE.OrthographicCamera( 1 / -2, 1 / 2, 1 / 2, 1 / -2, 1, 1000 );
     
     //light
-    var light = new THREE.PointLight(0xffffff, 1, 100);
-    light.position.set(1,1,4);
+    //var light = new THREE.PointLight(0xffffff, 1, 100);
+    //light.position.set(1,1,4);
+    
+    var tex   = genTexture();
+    var shaderMat = new THREE.ShaderMaterial({
+        uniforms: {
+            texture: {type: "t", value: tex}
+        },
+        vertexShader: document.getElementById("vertexShader").textContent,
+        fragmentShader: document.getElementById("fragmentShader").textContent,
+    })
     
     var material1 = new THREE.MeshNormalMaterial();
     var planeGeometry = new THREE.PlaneGeometry(2,2);
-    var plane = new THREE.Mesh(planeGeometry, material1);
+    var planeBufferGeometry = new THREE.BufferGeometry().fromGeometry(planeGeometry);
+    var plane = new THREE.Mesh(planeGeometry, shaderMat);
+    
+    var sphere1Geometry = new THREE.SphereGeometry(0.25,50,50);
+    var sphere1 = new THREE.Mesh(sphere1Geometry, material1);
+
+    
+    plane.position.z = -50;
+    sphere1.position.z = -25;
     
     scene.add(plane);
-    scene.add(light);
+    //scene.add(sphere1);
+    //scene.add(light);
     camera.position.x = 0;
     camera.position.y = 0;
     camera.position.z = 1;
@@ -531,9 +549,10 @@ function genTexture(){
     var count = 0;
     for(var i = 0; i < 400; ++i){
         for(var k = 0; k < 400; ++k){
-            arr[count + 0] = 1.0;
+            
+            arr[count + 0] = (k > 200) ? 1.0 : 0.5;
             arr[count + 1] = 1.0;
-            arr[count + 2] = 1.0;
+            arr[count + 2] = (i > 200) ? 1.0 : 0.5;
             arr[count + 3] = 1.0;
             
             count += 4;
@@ -542,6 +561,7 @@ function genTexture(){
     
     
     var arrTexture = new THREE.DataTexture(arr, 400, 400, THREE.RGBAFormat, THREE.FloatType);
+    arrTexture.needsUpdate = true;
     return arrTexture;
     
 }

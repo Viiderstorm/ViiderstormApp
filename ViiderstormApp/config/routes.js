@@ -56,11 +56,11 @@ module.exports.routes = {
       view: 'Project/proposal'
   },
   
-  /*
+  
   '/project/demo':{
       view: 'Project/project'
   },
-  */
+  
   
   '/me/about':{
       view: 'about'

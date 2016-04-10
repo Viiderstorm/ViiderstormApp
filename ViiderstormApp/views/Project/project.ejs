@@ -17,7 +17,7 @@
     </div>
     
     <div id="WebGLCanvas">
-        <canvas width=400px height=400px>
+        <canvas id="renderCanvasUniform" width=400px height=400px>
         </canvas>
     </div>
 
@@ -25,7 +25,7 @@
 
 <div class="ui divider " ></div>
 
-<script id="vertexShader" type="x-shader/x-vertex">
+<script id="passThruShader" type="x-shader/x-vertex">
 
         varying vec2 vUv;
 
@@ -38,22 +38,35 @@
 
 </script>
 
-<script id="fragmentShader" type="x-shader/x-fragment">
+<script id="imageShader" type="x-shader/x-fragment">
         uniform sampler2D texture;
         varying vec2 vUv;
         
-        void main()	{    
-				gl_FragColor = texture2D(texture, vUv);
+        void main()	{
+            
+				gl_FragColor = texture2D(texture, vUv.xy);
 
         }
 
+</script>
+
+<script id="objectIntersectionShader" type="x-shader/x-fragment">
+        uniform sampler2D origins;
+        uniform sampler2D directions;
+        varying vec2 vUv;
+        
+        void main(){
+        
+            
+        
+        }
 </script>
 
 <script>
     
      require(['main'], function(){
         require(['three'], function(THREE){
-            require(['/js/project.js'], function(){
+            require(['/js/project.js', '/js/GPGPU.js'], function(){
                 
             })  
         })

@@ -8,7 +8,7 @@
 // --Light
 // --Scene
 
-function ParallelRayTracer(view, scene, supersample){
+function RayTracer(view, scene, supersample){
     var self = this;
     self.view        = view;
     self.scene       = scene;
@@ -25,7 +25,51 @@ function ParallelRayTracer(view, scene, supersample){
     }
     
     self.render      = function(canvasId){
-        
+        for(var i = 0; i < self.rays.length; i++){
+            for(var k = 0; k < self.rays[i].length; k++){
+                
+                var colorSamples = []
+                
+                //supersampling ray loop
+                for(var z = 0; z < self.rays[i][k].length; z++){
+                    var intersection = self.scene.getIntersection(self.rays[i][k][z]);
+                    if(intersection != null){
+                        
+                        var ambientLight =  self.scene.getAmbientLight(intersection, 0.5);
+                        
+                        var shadowIntersections = self.scene.getShadowIntersectionsFromPoint(intersection.point);
+                        if(!arrayIsNull(shadowIntersections)){
+                            
+                            //ray intersection is in atleast 1 shadow, maybe more.
+                            colorSamples.push(ambientLight);
+                            
+                        } else {
+                            
+                            //ray intersection not in any shadow
+                            var diffuseLight  = self.scene.getDiffuseLight(intersection, 0.4);
+                            var specularLight = self.scene.getSpecularLight(intersection, self.rays[i][k][z], 0.2); 
+                            var tmpColor      = new THREE.Color(0x000000);
+                            tmpColor.add(ambientLight);
+                            tmpColor.add(diffuseLight);
+                            tmpColor.add(specularLight);
+                            colorSamples.push(tmpColor);
+                            
+                        }
+                    } else {
+                        
+                        //ray hits background
+                        colorSamples.push(self.scene.backgroundColor);
+                    }
+                }
+                
+                var finalColor = self.averageColor(colorSamples)
+                if(finalColor != null){
+                    self.view.imagePlane.pixels[i][k].color = finalColor;
+                }
+                
+            }
+        }
+        self.displayImage(canvasId)
     } 
     
     self.averageColor = function(colorSamples){
@@ -207,6 +251,46 @@ function Sphere(origin, radius, widthSegments, heightSegments, material){
 
         return null;
     }
+    self.getShaderCode  = function(objectIdNumber){
+        var qualifier = function(s){
+            var i = "sphere" + objectIdNumber + "_"; //sphereN_
+            return i + s;   
+        }
+        var origin    =  "uniform vec3 " + qualifier("origin") + ";\n";// uniform vec3 sphereN_origin;
+        var radius    =  "uniform float " + qualifier("radius") +";\n";// uniform float sphereN_radius;
+        var id        =  "uniform int " + qualifier("id") + ";\n";// uniform float sphereN_id;
+        var intersect_uniforms  = {}
+        intersect_uniforms[qualifier("origin")] = {type: 'v3', value: self.origin};
+        intersect_uniforms[qualifier("radius")] = {type: 'f', value: self.radius};
+        intersect_uniforms[qualifier("id")] = {type: 'i', value: objectIdNumber};
+        
+        var color_uniforms = {}
+        color_uniforms[qualifier("id")] = {type: 'f', value: objectIdNumber};
+        color_uniforms[qualifier("color")] = {type: 'c', value: self.mesh.material.color};
+        
+        var func_header = "vec4 " + qualifier("getIntersection") + "(vec3 rayOrigin, vec3 rayDirection){\n";
+        var func_contentA = "\tfloat A = pow(rayDirection.x, 2.0) + pow(rayDirection.y, 2.0) + pow(rayDirection.z, 2.0);\n"
+        var func_contentB = "\tfloat B = 2.0 * ((rayDirection.x * (rayOrigin.x - " + qualifier("origin") + ".x)) +" +
+                                           "(rayDirection.y * (rayOrigin.y - " + qualifier("origin") + ".y)) +" +
+                                           "(rayDirection.z * (rayOrigin.z - " + qualifier("origin") + ".z)));\n";
+        var func_contentC = "\tfloat C = pow(rayOrigin.x - " + qualifier("origin") + ".x, 2.0) + " +
+                                       "pow(rayOrigin.y - " + qualifier("origin") + ".y, 2.0) + " +
+                                       "pow(rayOrigin.z - " + qualifier("origin") + ".z, 2.0) - " +
+                                       "pow(" + qualifier("radius") + ", 2.0);\n";
+        var func_contentW1 = "\tfloat W1 = (-B - sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n";
+        var func_contentW2 = "\tfloat W2 = (-B + sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n";
+        var func_contentW  = "\tfloat W  = W1 > 0.0 ? W1 : W2;\n";
+        var func_contentif        = "\tif( W > 0.0 ){\n \t\treturn vec4(rayOrigin + (rayDirection * W), "+qualifier("id") +");\n\t} else {\n \t\treturn vec4(0,0,0,-1);\n\t}\n}\n";                               
+        
+        var boilerCode   = origin + radius + id;
+        var functionCode =  func_header + func_contentA + 
+                            func_contentB + func_contentC + func_contentW1 + 
+                            func_contentW2 + func_contentW + func_contentif;
+        
+        return { qualifier, intersect_uniforms, boilerCode, functionCode, color_uniforms }
+        
+        
+    }
     
 }
 
@@ -270,6 +354,96 @@ function Plane(origin, normal, width, height, material){
             }
         }
         return false;
+    }
+    
+    self.getShaderCode = function(objectIdNumber){
+        var qualifier = function(s){
+            var i = "plane" + objectIdNumber + "_";
+            return i + s;   
+        }
+        
+        var faceToVec2Str = function(s){
+            var p1 = "vec3(" + self.vertices[s.a].x + "," + self.vertices[s.a].y + "," + self.vertices[s.a].z + ")";
+            var p2 =  "vec3(" + self.vertices[s.b].x + "," + self.vertices[s.b].y + "," + self.vertices[s.b].z + ")";
+            var p3 =  "vec3(" + self.vertices[s.c].x + "," + self.vertices[s.c].y + "," + self.vertices[s.c].z + ")";
+            return [p1,p2,p3].join(',');
+        }
+        
+        var origin    =  "uniform vec3 " + qualifier("origin") + ";\n";// uniform vec3 planeN_origin;
+        var normal = "uniform vec3 " + qualifier("normal") + ";\n";//uniform vec3 planeN_normal;
+        var pointOnPlane = "uniform vec3 " + qualifier("pointOnPlane") + ";\n";//uniform vec2 planeN_pointOnPlane;
+        var id        =  "uniform int " + qualifier("id") + ";\n";// uniform float planeN_id;
+        var faces     = "struct " + qualifier("face") + "{\n" +
+                        "\t vec3 point1;\n" +
+                        "\t vec3 point2;\n" + 
+                        "\t vec3 point3;\n" +
+                        "}";
+        var faceInstances = []                        
+        for(var i = 0; i < self.faces.length; i++){
+            faceInstances.push( qualifier("face_tri") + i);
+        }
+        faces += faceInstances.join(",") + ";\n";
+        
+        var faceDefine = "\t" +qualifier("face") + " " + qualifier("faces") + "[" + self.faces.length + "];\n"; 
+        for(var i = 0; i < self.faces.length; i++){
+            faceDefine += "\t" + qualifier("face_tri") + i + " = " + qualifier("face") + "(" + faceToVec2Str(self.faces[i]) + ");\n";
+            faceDefine += "\t" + qualifier("faces") + "[" + i + "] = " + qualifier("face_tri") + i  + ";\n";
+        }
+        
+        var func1 = "vec4 " + qualifier("getIntersection") + 
+                    "(vec3 rayOrigin, vec3 rayDirection," + qualifier("face") + "[" + self.faces.length + "] faces){\n";
+        var func1_content1 = "\tvec3 rayToPoint = rayOrigin - " + qualifier("pointOnPlane") + ";\n";
+        var func1_content2 = "\tfloat denom = dot(" + qualifier("normal") + ", " + "rayDirection);\n";
+        var func1_content3 = "\tfloat num   = dot(rayToPoint, " + qualifier("normal") + ");\n";
+        var func1_content4 = "\tfloat t     = -(num/denom);\n";
+        var func1_content5 = "\tif(t >= 0.00000001){\n" +
+                             "\t\tvec4 intersectionPoint = vec4(rayOrigin + (rayDirection * t)," + objectIdNumber + ");\n" +
+                             "\t\tbool triangleCheck1;\n" +
+                             "\t\tbool triangleCheck2;\n" +
+                             "\t\ttriangleCheck1 = " + qualifier("isPointInPlane") + "(intersectionPoint.xyz, faces[0]);\n" +
+                             "\t\ttriangleCheck2 = " + qualifier("isPointInPlane") + "(intersectionPoint.xyz, faces[1]);\n" +
+                             "\t\tif(triangleCheck1 || triangleCheck2){\n" +
+                             "\t\t\t return intersectionPoint;\n" +
+                             "\t\t}\n" +
+                             "\t}\n" +
+                             "\treturn vec4(0,0,0,-1);\n";
+        var func1_end = "}\n"
+        
+        var func2 = "bool " + qualifier("isPointInPlane") + "(vec3 intersectionPoint," + qualifier("face") + " tri){\n";
+        for(var i = 0; i < 3; i++){
+            func2 += "\tvec3 linestoVertices" + i + " = tri.point" + (i+1) + " - intersectionPoint;\n"
+        }
+        for(var i = 0; i < 3; i++){
+            func2 += "\tfloat sum" + i + " = degrees(acos( dot(normalize(linestoVertices" + i + "), normalize(linestoVertices" + ((i+1)%3) + "))));\n";
+        }
+        func2 += "\tfloat totalSum = ";
+        var sums = [];
+        for(var i = 0; i < 3; i++){
+            sums.push("sum" + i);
+        }
+        func2 += sums.join("+") + ";\n"
+        func2 += "\tif(abs(totalSum - 360.0) < 0.1){\n" +
+                 "\t\t return true;\n" +
+                 "\t} else {\n" +
+                 "\t\t return false;\n" +
+                 "\t}\n";
+        func2_end = "}\n";
+                         
+        var intersect_uniforms = {};
+        intersect_uniforms[qualifier("origin")] = {type: 'v3', value: self.origin};
+        intersect_uniforms[qualifier("normal")] = {type: 'v3', value: self.normal};
+        intersect_uniforms[qualifier("pointOnPlane")] = {type: 'v3', value: self.vertices[0]};
+        intersect_uniforms[qualifier("id")] = {type: 'i', value: objectIdNumber};
+        
+        var color_uniforms = {};
+        color_uniforms[qualifier("id")] = {type: 'f', value: objectIdNumber};
+        color_uniforms[qualifier("color")] = {type: 'c', value: self.mesh.material.color};
+        
+        var boilerCode = origin + normal + pointOnPlane + id + faces;
+        var functionCode = func2 + func2_end;
+        functionCode += func1 + func1_content1 + func1_content2 + func1_content3 + func1_content4 + func1_content5 + func1_end;
+        
+        return {qualifier, intersect_uniforms, boilerCode, functionCode, faceDefine, color_uniforms};
     }
 }
 
@@ -430,6 +604,51 @@ function flattenArray(arr){
 /// END UTIL
 
 
+function SceneRenderer(id,width, height){
+    var self = this;
+    self.width = width;
+    self.height = height;
+    self.scRenderer = new THREE.WebGLRenderer();
+    self.scCamera = (function(){
+        var i = new THREE.OrthographicCamera( 1 / -2, 1 / 2, 1 / 2, 1 / -2, 1, 1000 )
+        i.position.z = 1;
+        i.position.y = 0;
+        i.position.x = 0;
+        i.up = new THREE.Vector3(0,1,0);
+        return i;
+    })()
+    self.scScene  = (function(){
+        var sc = new THREE.Scene();
+        var planeGeo = new THREE.PlaneGeometry(1,1);
+        var shaderMat = new THREE.ShaderMaterial({
+            uniforms: {
+                texture: {type: "t", value: self.frame}
+            },
+            vertexShader: document.getElementById("passThruShader").textContent,
+            fragmentShader: document.getElementById("imageShader").textContent
+        })
+        var plane = new THREE.Mesh(planeGeo, shaderMat);
+        plane.position.z = -1;
+        plane.rotation.z = -1.5708; //Cancels the rotations from using a DataTexture initially. DataTextures and RenderTargets are not presented in GLSL the same way.
+        sc.add(plane);
+        return sc;
+    })()
+    self.frame = null;
+    self.setFrame = function(nextFrame){
+        self.frame = nextFrame;
+        self.scScene.children[0].material.uniforms.texture.value = self.frame;
+    }
+    self.init  = function(){
+        self.scRenderer.setSize(self.width, self.height);
+        document.getElementById(id).appendChild(self.scRenderer.domElement);
+    }
+    self.render = function(){
+        self.scRenderer.render(self.scScene, self.scCamera);
+    }
+    
+}
+
+
 
 /// PARALLEL
 
@@ -460,11 +679,10 @@ function getRayTextures(rays, samplesize){
     originTexture.needsUpdate    = true;
     directionTexture.needsUpdate = true;
     
-    return {origins: originTexture, directions: directionTexture}
+    return {origins: {type: 't', value: originTexture}, directions: {type: 't', value: directionTexture}}
 }
 
 /// END PARALLEL
-
 
 /// INIT
 
@@ -491,55 +709,67 @@ var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).norma
 
 function init(){
     
-    
-    var width = 400;
-    var height  = 400;
-    
-    var scene = new THREE.Scene();
-    var renderer = new THREE.WebGLRenderer();
-    renderer.setSize( width, height);
-    document.getElementById("WebGLCanvas").appendChild(renderer.domElement);
-    
-    //camera
-    var camera = new THREE.OrthographicCamera( 1 / -2, 1 / 2, 1 / 2, 1 / -2, 1, 1000 );
-    
-    //light
-    //var light = new THREE.PointLight(0xffffff, 1, 100);
-    //light.position.set(1,1,4);
-    
-    var tex   = genTexture();
-    var shaderMat = new THREE.ShaderMaterial({
-        uniforms: {
-            texture: {type: "t", value: tex}
-        },
-        vertexShader: document.getElementById("vertexShader").textContent,
-        fragmentShader: document.getElementById("fragmentShader").textContent,
-    })
-    
-    var material1 = new THREE.MeshNormalMaterial();
-    var planeGeometry = new THREE.PlaneGeometry(2,2);
-    var planeBufferGeometry = new THREE.BufferGeometry().fromGeometry(planeGeometry);
-    var plane = new THREE.Mesh(planeGeometry, shaderMat);
-    
-    var sphere1Geometry = new THREE.SphereGeometry(0.25,50,50);
-    var sphere1 = new THREE.Mesh(sphere1Geometry, material1);
+    var sc;
+    var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
+    var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
+    var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
+
+    var sphere1 = new Sphere(new THREE.Vector3(0,0.1,2), 0.5, 50,50, material2);
+    var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, material3);
+    var sphere3 = new Sphere(new THREE.Vector3(-0.75,0.5,1), 0.45, 50,50, material3);
+    var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, material1);
+    var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
+
+    sc = new Scene();
+    sc.add(sphere1);
+    sc.add(sphere2);
+    sc.add(sphere3);
+    sc.add(plane1);
+    sc.add(light1);
     
-    plane.position.z = -50;
-    sphere1.position.z = -25;
+    var scr = new SceneRenderer("WebGLCanvas", 400, 400);
+    scr.init();
     
-    scene.add(plane);
-    //scene.add(sphere1);
-    //scene.add(light);
-    camera.position.x = 0;
-    camera.position.y = 0;
-    camera.position.z = 1;
+    var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
+    var rt      = new RayTracer(view, sc);
+    var gp = new GPGPU(scr, 400, 400, rt);
+    
+    var intersections = gp.getIntersections(getRayTextures(rt.view.getRays(), 1));
+    var colors        = gp.getColors({intersections: {type: 't', value: intersections},
+                                      bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
+    //rt.renderUniform("renderCanvasUniform");
+    var arr = new Float32Array(400 * 400 * 4);
+    scr.scRenderer.readRenderTargetPixels(intersections,0,0,400,400,arr );
     
     
-    renderer.render(scene,camera);
+    
+    //var imgD = rt.view.imagePlane.generateImage();
+    //var convD = convertData(imgD, 400, 400);
+    scr.setFrame(colors);
+    scr.render();
+    var buff = new Float32Array(400 * 400 * 4)
+    scr.scRenderer.readRenderTargetPixels(colors, 0, 0, 400, 400, buff);
     
     console.log("Hello");
         
+}
+
+function convertData(imageData, width, height){
+    var arr = new Float32Array(width * height * 4);
+    var count = 0;
+    for(var i = 0; i < height; ++i){
+        for(var k = 0; k < width; ++k){
+            arr[count + 0] = imageData[count + 0]/255;
+            arr[count + 1] = imageData[count + 1]/255;
+            arr[count + 2] = imageData[count + 2]/255;
+            arr[count + 3] = imageData[count + 3]/255;
+            count += 4;
+        }
+    }
+    var arrTexture = new THREE.DataTexture(arr, width, height, THREE.RGBAFormat, THREE.FloatType);
+    arrTexture.needsUpdate = true;
+    return arrTexture;
 }
 
 function genTexture(){

@@ -286,8 +286,12 @@ function Sphere(origin, radius, widthSegments, heightSegments, material){
         var functionCode =  func_header + func_contentA + 
                             func_contentB + func_contentC + func_contentW1 + 
                             func_contentW2 + func_contentW + func_contentif;
-        
-        return { qualifier, intersect_uniforms, boilerCode, functionCode, color_uniforms }
+        var r = { qualifier: qualifier , 
+                  intersect_uniforms: intersect_uniforms,
+                  boilerCode: boilerCode, 
+                  functionCode: functionCode, 
+                  color_uniforms: color_uniforms }; 
+        return r;
         
         
     }
@@ -443,7 +447,14 @@ function Plane(origin, normal, width, height, material){
         var functionCode = func2 + func2_end;
         functionCode += func1 + func1_content1 + func1_content2 + func1_content3 + func1_content4 + func1_content5 + func1_end;
         
-        return {qualifier, intersect_uniforms, boilerCode, functionCode, faceDefine, color_uniforms};
+        var r = {qualifier: qualifier,
+                 intersect_uniforms: intersect_uniforms, 
+                 boilerCode:boilerCode, 
+                 functionCode: functionCode, 
+                 faceDefine: faceDefine, 
+                 color_uniforms: color_uniforms};
+        
+        return r
     }
 }
 

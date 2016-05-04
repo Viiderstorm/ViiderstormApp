@@ -65,9 +65,9 @@ module.exports.routes = {
   },
   
   
-//   '/project/demo':{
-//       view: 'Project/project'
-//   },
+  '/project/demo':{
+      view: 'Project/project'
+  },
   
   
   '/me/about':{

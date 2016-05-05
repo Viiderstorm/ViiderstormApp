@@ -9,6 +9,7 @@ function GPGPU(SCR, width, height, rt){
     //fields
     self.rayTracer          = rt;
     self.intersectionShader = null;
+    self.normalShader       = null;
     self.colorShader        = null;
     self.gpRenderer         = SCR.scRenderer;
     self.gpCamera           = (function(){
@@ -29,6 +30,7 @@ function GPGPU(SCR, width, height, rt){
     //init
     self.init                = function(){
         self.intersectionShader = self.getIntersectionShader(self.rayTracer.scene);
+        self.normalShader       = self.getNormalShader(self.rayTracer.scene);
         self.colorShader        = self.getColorShader(self.rayTracer.scene);
     }
     
@@ -37,6 +39,12 @@ function GPGPU(SCR, width, height, rt){
         self.updateUniforms(self.intersectionShader, rayData );
         var intersections = self.compute(self.intersectionShader); // vec4(x,y,z, objectIndex)
         return intersections;
+    }
+    
+    self.getNormals = function(intersectionData){
+        self.updateUniforms(self.normalShader, intersectionData );
+        var normals = self.compute(self.normalShader);
+        return normals;
     }
     
     self.getColors        = function(intersectionData){
@@ -114,6 +122,35 @@ function GPGPU(SCR, width, height, rt){
         });
     }
     
+    self.getNormalShader = function(scene){
+        var sceneElems = scene.geometries;
+        var shader = "precision mediump float;\nuniform sampler2D intersections;\nvarying vec2 vUv;\n";
+        
+        for(var i = 0 ; i < sceneElems.length; i++){
+            shader += getNormalShaderUniforms(sceneElems[i], i);
+        }
+        
+        shader += getNormalShaderFunctions(sceneElems);
+        
+        shader += "void main(){\n" +
+                  "\tvec3 norm = getNormalForIntersection(texture2D(intersections, vUv.xy).xyzw);\n" +
+                  "\tgl_FragColor = vec4(norm,1.0);\n" +
+                  "}\n"
+        
+        var uniforms = {};
+        for(var i = 0 ; i < sceneElems.length; i++){
+            uniforms = $.extend(uniforms, getObjectNormalUniforms(sceneElems[i], i));
+        }
+        
+        return new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: document.getElementById("passThruShader").textContent,
+            fragmentShader: shader
+        });
+        
+        
+    }
+    
     self.getColorShader   = function(scene){
         var sceneElems = scene.geometries;
         var shader = "precision mediump float;\nuniform sampler2D intersections;\nvarying vec2 vUv;\n"; //TODO: Add normal and light info
@@ -141,7 +178,9 @@ function GPGPU(SCR, width, height, rt){
     self.init();
 }
 
-
+///////////////////////////
+//      INTERSECTION
+///////////////////////////
 function getShaderObjectUniforms(geo, objectid){
     var str = "";
     if(geo instanceof Sphere){
@@ -317,6 +356,53 @@ function getShaderIntersectionArray(objects){
     return str;
 }
 
+///////////////////////////
+//        NORMALS
+///////////////////////////
+function getNormalShaderUniforms(geo, objectid){
+    var str = "";
+    if(geo instanceof Sphere){
+        str = "uniform vec3 sphere" + objectid + "_origin;\n" +
+              "uniform float sphere" + objectid + "_id;\n";
+    } else if(geo instanceof Plane) {
+        str = "uniform vec3 plane" + objectid + "_normal;\n" +
+              "uniform float plane" + objectid + "_id;\n";
+    }
+    return str;
+}
+
+function getNormalShaderFunctions(objects){
+    var str = "vec3 getNormalForIntersection(vec4 intersection){\n" 
+    str += "\tvec3 norm;\n";
+    var clauses = [];
+    for(var i = 0 ; i < objects.length; i++){
+        var qualifier = "";
+        var eq = "";
+        if(objects[i] instanceof Sphere){
+            qualifier = "sphere" + i;
+            eq = "norm = intersection.xyz - " + qualifier + "_origin.xyz;\n";
+        } else if(objects[i] instanceof Plane){
+            qualifier = "plane" + i;
+            eq = "norm = " + qualifier + "_normal.xyz;\n";
+        } else {
+            break;
+        }
+        var clause = "(intersection.w == " + qualifier + "_id){\n" +
+                     "\t\t" + eq +
+                     "\t}";
+        clauses.push(clause);
+    }
+    str += "\tif" + clauses.join(" else if ");
+    str += "\telse {\n" +
+           "\t\tnorm = vec3(0.0,0.0,0.0);\n" +
+           "\t}\n";
+    str += "\treturn norm;\n}\n";
+    return str;
+}
+
+///////////////////////////
+//     COLORS
+///////////////////////////
 function getColorShaderUniforms(geo, objectid){
     var str = "";
     if(geo instanceof Sphere){
@@ -372,6 +458,21 @@ function getObjectIntersectionUniforms(geo, objectid){
     return null;
 }
 
+function getObjectNormalUniforms(geo, objectid){
+    if(geo instanceof Sphere){
+        var tmp = {};
+        tmp["sphere"+objectid+"_origin"] = {type: 'v3', value: geo.origin};
+        tmp["sphere"+objectid+"_id"] = {type: 'f', value: objectid};
+        return tmp;
+    } else if (geo instanceof Plane){
+        var tmp = {};
+        tmp["plane"+objectid+"_normal"] = {type: 'v3', value: geo.normal};
+        tmp["plane"+objectid+"_id"] = {type: 'f', value: objectid};
+        return tmp;
+    }
+    return null;
+}
+
 function getObjectColorUniforms(geo, objectid){
     if(geo instanceof Sphere){
         var tmp = {};
@@ -384,6 +485,7 @@ function getObjectColorUniforms(geo, objectid){
         tmp["plane"+objectid+"_color"] = {type: 'c', value: geo.material.color1};
         return tmp;
     }
+    return null;
 }
 
 

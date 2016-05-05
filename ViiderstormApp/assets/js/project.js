@@ -679,6 +679,7 @@ function init(){
     var gp = new GPGPU(scr, 400, 400, rt);
     
     var intersections = gp.getIntersections(getRayTextures(rt.view.getRays(), 1));
+    var normals       = gp.getNormals({intersections: {type: 't', value: intersections}});
     var colors        = gp.getColors({intersections: {type: 't', value: intersections},
                                       bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
     //rt.renderUniform("renderCanvasUniform");

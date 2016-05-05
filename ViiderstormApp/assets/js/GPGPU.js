@@ -9,7 +9,7 @@ function GPGPU(SCR, width, height, rt){
     //fields
     self.rayTracer          = rt;
     self.intersectionShader = null;
-    self.normalShader       = null;
+    self.shadowShader       = null;
     self.colorShader        = null;
     self.gpRenderer         = SCR.scRenderer;
     self.gpCamera           = (function(){
@@ -30,7 +30,7 @@ function GPGPU(SCR, width, height, rt){
     //init
     self.init                = function(){
         self.intersectionShader = self.getIntersectionShader(self.rayTracer.scene);
-        self.normalShader       = self.getNormalShader(self.rayTracer.scene);
+        self.shadowShader       = self.getShadowShader(self.rayTracer.scene);
         self.colorShader        = self.getColorShader(self.rayTracer.scene);
     }
     
@@ -41,14 +41,14 @@ function GPGPU(SCR, width, height, rt){
         return intersections;
     }
     
-    self.getNormals = function(intersectionData){
-        self.updateUniforms(self.normalShader, intersectionData );
-        var normals = self.compute(self.normalShader);
-        return normals;
+    self.getShadows = function(intersectionData){
+        self.updateUniforms(self.shadowShader, intersectionData );
+        var shadows = self.compute(self.shadowShader);
+        return shadows;
     }
     
-    self.getColors        = function(intersectionData){
-        self.updateUniforms(self.colorShader, intersectionData);
+    self.getColors        = function(data){
+        self.updateUniforms(self.colorShader, data);
         var colors        = self.compute(self.colorShader);
         return colors;
     }
@@ -122,15 +122,16 @@ function GPGPU(SCR, width, height, rt){
         });
     }
     
-    self.getNormalShader = function(scene){
+    self.getShadowShader = function(scene){
         var sceneElems = scene.geometries;
         var shader = "precision mediump float;\nuniform sampler2D intersections;\nvarying vec2 vUv;\n";
         
+        //
         for(var i = 0 ; i < sceneElems.length; i++){
-            shader += getNormalShaderUniforms(sceneElems[i], i);
+            shader += getShadowShaderUniforms(sceneElems[i], i);
         }
         
-        shader += getNormalShaderFunctions(sceneElems);
+        shader += getShadowShaderFunctions(sceneElems);
         
         shader += "void main(){\n" +
                   "\tvec3 norm = getNormalForIntersection(texture2D(intersections, vUv.xy).xyzw);\n" +
@@ -139,7 +140,7 @@ function GPGPU(SCR, width, height, rt){
         
         var uniforms = {};
         for(var i = 0 ; i < sceneElems.length; i++){
-            uniforms = $.extend(uniforms, getObjectNormalUniforms(sceneElems[i], i));
+            uniforms = $.extend(uniforms, getObjectShadowUniforms(sceneElems[i], i));
         }
         
         return new THREE.ShaderMaterial({
@@ -153,8 +154,11 @@ function GPGPU(SCR, width, height, rt){
     
     self.getColorShader   = function(scene){
         var sceneElems = scene.geometries;
-        var shader = "precision mediump float;\nuniform sampler2D intersections;\nvarying vec2 vUv;\n"; //TODO: Add normal and light info
-        shader += "uniform vec3 bgColor;\n"
+        var shader = "precision mediump float;\n" +
+                     "uniform sampler2D intersections;\n" +
+                     "uniform sampler2D normals;\n" +
+                     "uniform vec3 bgColor;\n" +
+                     "varying vec2 vUv;\n";
         for(var i = 0 ; i < sceneElems.length; i++){
             shader += getColorShaderUniforms(sceneElems[i], i);
         }
@@ -357,9 +361,9 @@ function getShaderIntersectionArray(objects){
 }
 
 ///////////////////////////
-//        NORMALS
+//        SHADOWS
 ///////////////////////////
-function getNormalShaderUniforms(geo, objectid){
+function getShadowShaderUniforms(geo, objectid){
     var str = "";
     if(geo instanceof Sphere){
         str = "uniform vec3 sphere" + objectid + "_origin;\n" +
@@ -371,7 +375,7 @@ function getNormalShaderUniforms(geo, objectid){
     return str;
 }
 
-function getNormalShaderFunctions(objects){
+function getShadowShaderFunctions(objects){
     var str = "vec3 getNormalForIntersection(vec4 intersection){\n" 
     str += "\tvec3 norm;\n";
     var clauses = [];
@@ -440,6 +444,10 @@ function getColorShaderIfStatement(objects){
     return str;
 }
 
+
+///////////////////////////
+//          UNIFORMS
+///////////////////////////
 function getObjectIntersectionUniforms(geo, objectid){
     if(geo instanceof Sphere){
         var tmp = {};
@@ -458,7 +466,7 @@ function getObjectIntersectionUniforms(geo, objectid){
     return null;
 }
 
-function getObjectNormalUniforms(geo, objectid){
+function getObjectShadowUniforms(geo, objectid){
     if(geo instanceof Sphere){
         var tmp = {};
         tmp["sphere"+objectid+"_origin"] = {type: 'v3', value: geo.origin};
@@ -518,138 +526,3 @@ function getRayTextures(rays, samplesize){
     
     return {origins: {type: 't', value: originTexture}, directions: {type: 't', value: directionTexture}}
 }
-
-/*
-
-function SceneRenderer(id,width, height){
-    var self = this;
-    self.width = width;
-    self.height = height;
-    self.scRenderer = new THREE.WebGLRenderer();
-    self.scCamera = (function(){
-        var i = new THREE.OrthographicCamera( 1 / -2, 1 / 2, 1 / 2, 1 / -2, 1, 1000 )
-        i.position.z = 1;
-        i.position.y = 0;
-        i.position.x = 0;
-        i.up = new THREE.Vector3(0,1,0);
-        return i;
-    })()
-    self.scScene  = (function(){
-        var sc = new THREE.Scene();
-        var planeGeo = new THREE.PlaneGeometry(1,1);
-        var shaderMat = new THREE.ShaderMaterial({
-            uniforms: {
-                texture: {type: "t", value: self.frame}
-            },
-            vertexShader: document.getElementById("passThruShader").textContent,
-            fragmentShader: document.getElementById("imageShader").textContent
-        })
-        var plane = new THREE.Mesh(planeGeo, shaderMat);
-        plane.position.z = -1;
-        plane.rotation.z = -1.5708; //Cancels the rotations from using a DataTexture initially. DataTextures and RenderTargets are not presented in GLSL the same way.
-        sc.add(plane);
-        return sc;
-    })()
-    self.frame = null;
-    self.setFrame = function(nextFrame){
-        self.frame = nextFrame;
-        self.scScene.children[0].material.uniforms.texture.value = self.frame;
-    }
-    self.init  = function(){
-        self.scRenderer.setSize(self.width, self.height);
-        document.getElementById(id).appendChild(self.scRenderer.domElement);
-    }
-    self.render = function(){
-        self.scRenderer.render(self.scScene, self.scCamera);
-    }
-    
-}
-
-function init(){
-    
-    var sc;
-    var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
-    var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
-    var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-
-
-    var sphere1 = new Sphere(new THREE.Vector3(0,0.1,2), 0.5, 50,50, material2);
-    var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, material3);
-    var sphere3 = new Sphere(new THREE.Vector3(-0.75,0.5,1), 0.45, 50,50, material3);
-    var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, material1);
-    var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
-
-    sc = new Scene();
-    sc.add(sphere1);
-    sc.add(sphere2);
-    sc.add(sphere3);
-    sc.add(plane1);
-    sc.add(light1);
-    
-    var scr = new SceneRenderer("WebGLCanvas", 400, 400);
-    scr.init();
-    
-    var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-    var rt      = new RayTracer(view, sc);
-    var gp = new GPGPU(scr, 400, 400, rt);
-    
-    var intersections = gp.getIntersections(getRayTextures(rt.view.getRays(), 1));
-    var colors        = gp.getColors({intersections: {type: 't', value: intersections},
-                                      bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
-    //rt.renderUniform("renderCanvasUniform");
-    var arr = new Float32Array(400 * 400 * 4);
-    scr.scRenderer.readRenderTargetPixels(intersections,0,0,400,400,arr );
-    
-    
-    
-    //var imgD = rt.view.imagePlane.generateImage();
-    //var convD = convertData(imgD, 400, 400);
-    scr.setFrame(colors);
-    scr.render();
-    var buff = new Float32Array(400 * 400 * 4)
-    scr.scRenderer.readRenderTargetPixels(colors, 0, 0, 400, 400, buff);
-    
-    console.log("Hello");
-        
-}
-
-function convertData(imageData, width, height){
-    var arr = new Float32Array(width * height * 4);
-    var count = 0;
-    for(var i = 0; i < height; ++i){
-        for(var k = 0; k < width; ++k){
-            arr[count + 0] = imageData[count + 0]/255;
-            arr[count + 1] = imageData[count + 1]/255;
-            arr[count + 2] = imageData[count + 2]/255;
-            arr[count + 3] = imageData[count + 3]/255;
-            count += 4;
-        }
-    }
-    var arrTexture = new THREE.DataTexture(arr, width, height, THREE.RGBAFormat, THREE.FloatType);
-    arrTexture.needsUpdate = true;
-    return arrTexture;
-}
-
-function genTexture(){
-    
-    var arr = new Float32Array(400 * 400 * 4);
-    
-    var count = 0;
-    for(var i = 0; i < 400; ++i){
-        for(var k = 0; k < 400; ++k){
-            
-            arr[count + 0] = (k > 200) ? 1.0 : 0.5;
-            arr[count + 1] = 1.0;
-            arr[count + 2] = (i > 200) ? 1.0 : 0.5;
-            arr[count + 3] = 1.0;
-            
-            count += 4;
-        }
-    }
-    
-    
-    var arrTexture = new THREE.DataTexture(arr, 400, 400, THREE.RGBAFormat, THREE.FloatType);
-    arrTexture.needsUpdate = true;
-    return arrTexture;
-    
-}*/

@@ -679,8 +679,9 @@ function init(){
     var gp = new GPGPU(scr, 400, 400, rt);
     
     var intersections = gp.getIntersections(getRayTextures(rt.view.getRays(), 1));
-    var normals       = gp.getNormals({intersections: {type: 't', value: intersections}});
+    var normals       = gp.getShadows({intersections: {type: 't', value: intersections}});
     var colors        = gp.getColors({intersections: {type: 't', value: intersections},
+                                      normals: {type: 't', value: normals},
                                       bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
     //rt.renderUniform("renderCanvasUniform");
     var arr = new Float32Array(400 * 400 * 4);

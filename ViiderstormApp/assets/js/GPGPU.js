@@ -73,35 +73,17 @@ function GPGPU(SCR, width, height, rt){
         var sceneElems = scene.geometries;
         var shader = "precision mediump float;\nuniform sampler2D origins;\nuniform sampler2D directions;\nvarying vec2 vUv;\n";
         
-        //Uniforms
-        for(var i = 0 ; i < sceneElems.length; i++){
-            shader += getShaderObjectUniforms(sceneElems[i], i);
-        }
-        //Structs
-        for(var i = 0 ; i < sceneElems.length; i++){
-            shader += getShaderObjectStructs(sceneElems[i], i);
-        }
+        shader += getShaderObjectUniforms(sceneElems);
+        shader += getShaderObjectStructs(sceneElems);
         
         //Closest Intersection
         shader += getClosestIntersectionFunction(sceneElems.length);
-        
-        //Functions
-        for(var i = 0 ; i < sceneElems.length; i++){
-            shader += getShaderObjectFunctions(sceneElems[i], i);
-        }
+        shader += getShaderObjectIntersectionFunctions(sceneElems);
         
         //MAIN
         shader += "void main(){\n";
-        
-        //Struct instances
-        for(var i = 0 ; i < sceneElems.length; i++){
-            shader += getShaderObjectStructInstances(sceneElems[i], i);
-        }
-        
-        //intersections
+        shader += getShaderObjectStructInstances(sceneElems);
         shader += getShaderIntersectionArray(sceneElems);
-        
-        //
         shader += "\tvec4 closestIntersection = findClosestIntersection(intersections);\n" +
                   "\tif(closestIntersection.w >= 0.0){\n" +
                   "\t\tgl_FragColor = closestIntersection;\n"+
@@ -124,23 +106,30 @@ function GPGPU(SCR, width, height, rt){
     
     self.getShadowShader = function(scene){
         var sceneElems = scene.geometries;
-        var shader = "precision mediump float;\nuniform sampler2D intersections;\nvarying vec2 vUv;\n";
+        var shader = "precision mediump float;\n" +
+                     "uniform sampler2D intersections;\n"+
+                     "varying vec2 vUv;\n";
         
-        //
-        for(var i = 0 ; i < sceneElems.length; i++){
-            shader += getShadowShaderUniforms(sceneElems[i], i);
-        }
+        shader += getShaderObjectUniforms(sceneElems);
+        shader += getShadowShaderUniforms(scene.lights);
+        shader += getShaderObjectStructs(sceneElems);
+        shader += getShaderObjectIntersectionFunctions(sceneElems);
         
         shader += getShadowShaderFunctions(sceneElems);
         
         shader += "void main(){\n" +
-                  "\tvec3 norm = getNormalForIntersection(texture2D(intersections, vUv.xy).xyzw);\n" +
-                  "\tgl_FragColor = vec4(norm,1.0);\n" +
+                  getShaderObjectStructInstances(sceneElems) +
+                  "\tvec3 norm = getNormalForIntersection(texture2D(intersections, vUv.xy).xyzw);\n" + 
+                  getShadowShaderCount(scene.lights) +
+                  "\tgl_FragColor = vec4(norm,shadowCount);\n" +
                   "}\n"
         
         var uniforms = {};
         for(var i = 0 ; i < sceneElems.length; i++){
-            uniforms = $.extend(uniforms, getObjectShadowUniforms(sceneElems[i], i));
+            uniforms = $.extend(uniforms, getObjectIntersectionUniforms(sceneElems[i], i));
+        }
+        for(var i = 0 ; i < scene.lights.length; i++){
+            uniforms = $.extend(uniforms, getObjectShadowUniforms(scene.lights[i], i));
         }
         
         return new THREE.ShaderMaterial({
@@ -185,148 +174,149 @@ function GPGPU(SCR, width, height, rt){
 ///////////////////////////
 //      INTERSECTION
 ///////////////////////////
-function getShaderObjectUniforms(geo, objectid){
+function getShaderObjectUniforms(objects){
     var str = "";
-    if(geo instanceof Sphere){
-        str = "uniform vec3 sphere" + objectid + "_origin;\n" + 
-              "uniform float sphere" + objectid + "_radius;\n" + 
-              "uniform int sphere" + objectid + "_id;\n"; 
-    } else if(geo instanceof Plane){
-        str = "uniform vec3 plane" + objectid + "_origin;\n" + 
-              "uniform vec3 plane" + objectid + "_normal;\n" +
-              "uniform vec3 plane" + objectid + "_pointOnPlane;\n" + 
-              "uniform int plane" + objectid + "_id;\n";
-    }
-    return str;
-}
-
-function getShaderObjectStructs(geo, objectid){
-    var str = "";
-    if(geo instanceof Plane){
-        
-        //create struct
-        str = "struct plane" + objectid + "_face{\n" +
-              "\t vec3 point1;\n" +
-              "\t vec3 point2;\n" + 
-              "\t vec3 point3;\n" +
-              "} ";
-              
-        //define structs
-        for(var i = 0; i < geo.faces.length; i++){
-            str += "plane" + objectid + "_triangle" + i + 
-                    ((i == geo.faces.length - 1) ? ";\n" : ",");
-             
+    for(var id = 0; id < objects.length; id++){
+        if(objects[id] instanceof Sphere){
+            str += "uniform vec3 sphere" + id + "_origin;\n" + 
+                "uniform float sphere" + id + "_radius;\n" + 
+                "uniform float sphere" + id + "_id;\n"; 
+        } else if(objects[id] instanceof Plane){
+            str += "uniform vec3 plane" + id + "_origin;\n" + 
+                "uniform vec3 plane" + id + "_normal;\n" +
+                "uniform vec3 plane" + id + "_pointOnPlane;\n" + 
+                "uniform float plane" + id + "_id;\n";
         }
     }
     return str;
 }
 
-function getShaderObjectStructInstances(geo, objectid){
-    var str = "";
-    if(geo instanceof Plane){
-        
-        //define array
-        str = "\tplane" + objectid + "_face " + 
-                "plane" + objectid + "_faces[" + geo.faces.length + "];\n";
+/*
+    struct face{
+        vec3 point1;
+        vec3 point2;
+        vec3 point3;    
+    } planeN_triangleN, ... ;
+*/
+function getShaderObjectStructs(objects){
+    //create struct
+    var str = "struct face{\n" +
+            "\t vec3 point1;\n" +
+            "\t vec3 point2;\n" + 
+            "\t vec3 point3;\n" +
+            "} ";
+    for(var i = 0; i < objects.length; i++){
+        if(objects[i] instanceof Plane){         
+            //define structs
+            for(var k = 0; k < objects[i].faces.length; k++){
+                str += "plane" + i + "_triangle" + k + 
+                        ((k == objects[i].faces.length - 1) ? ";\n\n" : ",");
                 
-        //helper function                
-        var faceToStr = function(s){
-            var p1 = "vec3(" + geo.vertices[s.a].x + "," + geo.vertices[s.a].y + "," + geo.vertices[s.a].z + ")";
-            var p2 =  "vec3(" + geo.vertices[s.b].x + "," + geo.vertices[s.b].y + "," + geo.vertices[s.b].z + ")";
-            var p3 =  "vec3(" + geo.vertices[s.c].x + "," + geo.vertices[s.c].y + "," + geo.vertices[s.c].z + ")";
-            return [p1,p2,p3].join(',');
+            }
         }
-        
-        //instantiate and place into array
-        for(var i = 0; i < geo.faces.length; i++){
-            //"planeN_triangleN = planeN_face(vec3,vec3,vec3);"
-            str += "\tplane" + objectid + "_triangle" + i + " = " + 
-                    "plane"  + objectid + "_face" + "(" + faceToStr(geo.faces[i]) + ");\n";
-            //"planeN_faces[N] = planeN_triangleN;"
-            str += "\tplane" + objectid + "_faces[" + i + "] = " +
-                    "plane"  + objectid + "_triangle" + i  + ";\n";
-        }
-                 
     }
     return str;
 }
 
-function getShaderObjectFunctions(geo, objectid){
+/*
+    face planeN_faces[N];
+    planeN_triangle0 = face(pos1,pos2,pos3);
+    planeN_faces[0] = planeN_triangle0;
+    .
+    .
+    .
+    planeN_triangleN = face(pos1,pos2,pos3);
+    planeN_faces[N] = planeN_triangleN;
+*/
+function getShaderObjectStructInstances(objects){
     var str = "";
-    if(geo instanceof Sphere){
-        str = "vec4 getIntersection(vec3 rayOrigin, vec3 rayDirection){\n" +
-              "\tfloat A = pow(rayDirection.x, 2.0) + pow(rayDirection.y, 2.0) + pow(rayDirection.z, 2.0);\n" +
-              "\tfloat B = 2.0 * ((rayDirection.x * (rayOrigin.x - origin.x)) +" +
-                                 "(rayDirection.y * (rayOrigin.y - origin.y)) +" +
-                                 "(rayDirection.z * (rayOrigin.z - origin.z)));\n" +
-              "\tfloat C = pow(rayOrigin.x - origin.x, 2.0) + " +
-                          "pow(rayOrigin.y - origin.y, 2.0) + " +
-                          "pow(rayOrigin.z - origin.z, 2.0) - " +
-                          "pow(radius, 2.0);\n" +
-              "\tfloat W1 = (-B - sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n" +
-              "\tfloat W2 = (-B + sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n" +
-              "\tfloat W  = W1 > 0.0 ? W1 : W2;\n" +
-              "\tif( W > 0.0 ){\n \t\treturn vec4(rayOrigin + (rayDirection * W), id);\n" + 
-              "\t} else {\n \t\treturn vec4(0,0,0,-1);\n" + 
-              "\t}\n}\n";
-         var qualifier = "sphere" + objectid;
-         str = str.replace(new RegExp("getIntersection", 'g'), qualifier + "_getIntersection");
-         str = str.replace(new RegExp("origin", 'g'), qualifier + "_origin");
-         str = str.replace(new RegExp("radius", 'g'), qualifier + "_radius");
-         str = str.replace(new RegExp("id", 'g'), qualifier + "_id");     
-               
-    } else if (geo instanceof Plane){
-        var qualifier = "plane" + objectid;
-        var tmp = "vec4 getIntersection(vec3 rayOrigin, vec3 rayDirection, face[face_length] f){\n"+
-                  "\tvec3 rayToPoint = rayOrigin - pointOnPlane;\n" + 
-                  "\tfloat denom = dot(normal, rayDirection);\n" +
-                  "\tfloat num   = dot(rayToPoint, normal);\n" +
-                  "\tfloat t     = -(num/denom);\n" + 
-                  "\tif(t >= 0.00000001){\n" +
-                  "\t\tvec4 intersectionPoint = vec4(rayOrigin + (rayDirection * t), id);\n" +
-                  "\t\tbool triangleCheck1;\n" +
-                  "\t\tbool triangleCheck2;\n" +
-                  "\t\ttriangleCheck1 = isPointInPlane(intersectionPoint.xyz, f[0]);\n" +
-                  "\t\ttriangleCheck2 = isPointInPlane(intersectionPoint.xyz, f[1]);\n" +
-                  "\t\tif(triangleCheck1 || triangleCheck2){\n" +
-                  "\t\t\t return intersectionPoint;\n" +
-                  "\t\t}\n" +
-                  "\t}\n" +
-                  "\treturn vec4(0,0,0,-1);\n" + 
-                  "}\n";
-        tmp = tmp.replace(new RegExp("getIntersection", 'g'), qualifier + "_getIntersection");
-        tmp = tmp.replace(new RegExp("face_length", 'g'), geo.faces.length + "");
-        tmp = tmp.replace(new RegExp("face", 'g'), qualifier + "_face");
-        tmp = tmp.replace(new RegExp("pointOnPlane", 'g'), qualifier + "_pointOnPlane");
-        tmp = tmp.replace(new RegExp("normal", 'g'), qualifier + "_normal");
-        tmp = tmp.replace(new RegExp("id", 'g'), objectid + "");
-        
-        var tmp2 = "bool isPointInPlane(vec3 intersectionPoint, face tri){\n";
-        for(var i = 0; i < 3; i++){
-            tmp2 += "\tvec3 linestoVertices" + i + " = tri.point" + (i+1) + " - intersectionPoint;\n"
+    
+    for(var id = 0 ; id < objects.length; id++){
+        var geo = objects[id];
+        if(geo instanceof Plane){
+            
+            //define array
+            str = "\tface plane" + id + "_faces[" + geo.faces.length + "];\n";
+                    
+            //helper function                
+            var faceToStr = function(s){
+                var p1 = "vec3(" + geo.vertices[s.a].x + "," + geo.vertices[s.a].y + "," + geo.vertices[s.a].z + ")";
+                var p2 =  "vec3(" + geo.vertices[s.b].x + "," + geo.vertices[s.b].y + "," + geo.vertices[s.b].z + ")";
+                var p3 =  "vec3(" + geo.vertices[s.c].x + "," + geo.vertices[s.c].y + "," + geo.vertices[s.c].z + ")";
+                return [p1,p2,p3].join(',');
+            }
+            
+            //instantiate and place into array
+            for(var k = 0; k < geo.faces.length; k++){
+                //"planeN_triangleN = face(vec3,vec3,vec3);"
+                str += "\tplane" + id + "_triangle" + k + " = " + 
+                        "face" + "(" + faceToStr(geo.faces[k]) + ");\n";
+                //"planeN_faces[N] = planeN_triangleN;"
+                str += "\tplane" + id + "_faces[" + k + "] = " +
+                        "plane"  + id + "_triangle" + k  + ";\n";
+            }
+                    
         }
-        for(var i = 0; i < 3; i++){
-            tmp2 += "\tfloat sum" + i + " = degrees(acos( dot(normalize(linestoVertices" + i + "), normalize(linestoVertices" + ((i+1)%3) + "))));\n";
-        }
-        tmp2 += "\tfloat totalSum = ";
-        var sums = [];
-        for(var i = 0; i < 3; i++){
-            sums.push("sum" + i);
-        }
-        tmp2 += sums.join("+") + ";\n" +
-                "\tif(abs(totalSum - 360.0) < 0.1){\n" +
-                 "\t\t return true;\n" +
-                 "\t} else {\n" +
-                 "\t\t return false;\n" +
-                 "\t}\n" +
-                 "}\n";
-        tmp2 = tmp2.replace(new RegExp("pointOnPlane", 'g'), qualifier + "_pointOnPlane");
-        tmp2 = tmp2.replace(new RegExp("face", 'g'), qualifier + "_face");
-        
-        //define triangleCheck before intersectionCalc
-        str = tmp2 + tmp;
     }
     return str;
+}
+
+function getShaderObjectIntersectionFunctions(objects){
+    var sphere = "";
+    var plane  = "";
+    
+    for(var i = 0 ; i < objects.length; i++){
+        if(objects[i] instanceof Sphere && sphere == ""){
+            sphere = "vec4 getSphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 origin, float radius, float id){\n" +
+                     "\tfloat A = pow(rayDirection.x, 2.0) + pow(rayDirection.y, 2.0) + pow(rayDirection.z, 2.0);\n" +
+                     "\tfloat B = 2.0 * ((rayDirection.x * (rayOrigin.x - origin.x)) +" +
+                                         "(rayDirection.y * (rayOrigin.y - origin.y)) +" +
+                                         "(rayDirection.z * (rayOrigin.z - origin.z)));\n" +
+                     "\tfloat C = pow(rayOrigin.x - origin.x, 2.0) + " +
+                                 "pow(rayOrigin.y - origin.y, 2.0) + " +
+                                 "pow(rayOrigin.z - origin.z, 2.0) - " +
+                                 "pow(radius, 2.0);\n" +
+                     "\tfloat W1 = (-B - sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n" +
+                     "\tfloat W2 = (-B + sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n" +
+                     "\tfloat W  = W1 > 0.0 ? W1 : W2;\n" +
+                     "\tif( W > 0.0 ){\n \t\treturn vec4(rayOrigin + (rayDirection * W), id);\n" + 
+                     "\t} else {\n \t\treturn vec4(0,0,0,-1);\n" + 
+                     "\t}\n}\n\n";
+        } else if (objects[i] instanceof Plane && plane == ""){
+            plane = "bool isPointInPlane(vec3 intersectionPoint, face f){\n" +
+                    "\tvec3 linestoVertices0 = f.point1 - intersectionPoint;\n" +
+                    "\tvec3 linestoVertices1 = f.point2 - intersectionPoint;\n" +
+                    "\tvec3 linestoVertices2 = f.point3 - intersectionPoint;\n" +
+                    "\tfloat sum0 = degrees(acos( dot(normalize(linestoVertices0), normalize(linestoVertices1))));\n"+
+                    "\tfloat sum1 = degrees(acos( dot(normalize(linestoVertices1), normalize(linestoVertices2))));\n"+
+                    "\tfloat sum2 = degrees(acos( dot(normalize(linestoVertices2), normalize(linestoVertices0))));\n"+
+                    "\tfloat totalSum = sum0 + sum1 + sum2;\n" +
+                    "\tif(abs(totalSum - 360.0) < 0.1){\n" +
+                    "\t\t return true;\n" +
+                    "\t} else {\n" +
+                    "\t\t return false;\n" +
+                    "\t}\n" +
+                    "}\n\n" +
+                    "vec4 getPlaneIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 pointOnPlane, face[2] faces, vec3 normal, float id){\n"+
+                    "\tvec3 rayToPoint = rayOrigin - pointOnPlane;\n" + 
+                    "\tfloat denom = dot(normal, rayDirection);\n" +
+                    "\tfloat num   = dot(rayToPoint, normal);\n" +
+                    "\tfloat t     = -(num/denom);\n" + 
+                    "\tif(t >= 0.00000001){\n" +
+                    "\t\tvec4 intersectionPoint = vec4(rayOrigin + (rayDirection * t), id);\n" +
+                    "\t\tbool triangleCheck1;\n" +
+                    "\t\tbool triangleCheck2;\n" +
+                    "\t\ttriangleCheck1 = isPointInPlane(intersectionPoint.xyz, faces[0]);\n" +
+                    "\t\ttriangleCheck2 = isPointInPlane(intersectionPoint.xyz, faces[1]);\n" +
+                    "\t\tif(triangleCheck1 || triangleCheck2){\n" +
+                    "\t\t\t return intersectionPoint;\n" +
+                    "\t\t}\n" +
+                    "\t}\n" +
+                    "\treturn vec4(0,0,0,-1);\n" + 
+                    "}\n\n";
+        }
+    }
+    return sphere + plane;
 }
 
 function getClosestIntersectionFunction(numObjects){
@@ -336,8 +326,8 @@ function getClosestIntersectionFunction(numObjects){
             "\t\tif(intersections[i].w < 0.0){\n"+
             "\t\t\tcontinue;\n"+
             "\t\t}\n"+
-            "\t\tfloat distance1 = distance(intersections[i].xyz, texture2D(origins, vUv.yx).xyz);\n" +
-            "\t\tfloat distance2 = distance(max.xyz, texture2D(origins, vUv.yx).xyz);\n" +
+            "\t\tfloat distance1 = distance(intersections[i].xyz, texture2D(origins, vUv.xy).xyz);\n" +
+            "\t\tfloat distance2 = distance(max.xyz, texture2D(origins, vUv.xy).xyz);\n" +
             "\t\tif(distance1 < distance2){\n"+
             "\t\t\tmax = intersections[i].xyzw;\n" +
             "\t\t}\n" +
@@ -351,10 +341,19 @@ function getShaderIntersectionArray(objects){
     str = "\tvec4 intersections[" + objects.length + "];\n"
     for(var i = 0; i < objects.length; i++){
         if(objects[i] instanceof Plane){
-            str += "\tintersections[" + i + "] = plane" + i + "_getIntersection"+ 
-            "(texture2D(origins,vUv.yx).xyz,texture2D(directions,vUv.yx).xyz, plane" + i + "_faces);\n";
+            str += "\tintersections[" + i + "] = getPlaneIntersection"+ 
+                   "(texture2D(origins,vUv.xy).xyz,texture2D(directions,vUv.xy).xyz," +
+                   "plane" + i + "_pointOnPlane.xyz," +
+                   "plane" + i + "_faces," +
+                   "plane" + i + "_normal," +
+                   "plane" + i + "_id" +
+                   ");\n";
         } else if (objects[i] instanceof Sphere){
-            str += "\tintersections[" + i + "] = sphere" + i + "_getIntersection(texture2D(origins,vUv.yx).xyz,texture2D(directions,vUv.yx).xyz);\n";
+            str += "\tintersections[" + i + "] = getSphereIntersection(texture2D(origins,vUv.xy).xyz,texture2D(directions,vUv.xy).xyz," +
+                   "sphere" + i + "_origin.xyz," +
+                   "sphere" + i + "_radius," +
+                   "sphere" + i + "_id" +
+                   ");\n";
         }
     }
     return str;
@@ -363,14 +362,10 @@ function getShaderIntersectionArray(objects){
 ///////////////////////////
 //        SHADOWS
 ///////////////////////////
-function getShadowShaderUniforms(geo, objectid){
+function getShadowShaderUniforms(lights){
     var str = "";
-    if(geo instanceof Sphere){
-        str = "uniform vec3 sphere" + objectid + "_origin;\n" +
-              "uniform float sphere" + objectid + "_id;\n";
-    } else if(geo instanceof Plane) {
-        str = "uniform vec3 plane" + objectid + "_normal;\n" +
-              "uniform float plane" + objectid + "_id;\n";
+    for(var i = 0 ; i < lights.length; i++){
+        str += "uniform vec3 light" + i + "_origin;\n";
     }
     return str;
 }
@@ -389,7 +384,7 @@ function getShadowShaderFunctions(objects){
             qualifier = "plane" + i;
             eq = "norm = " + qualifier + "_normal.xyz;\n";
         } else {
-            break;
+            continue;
         }
         var clause = "(intersection.w == " + qualifier + "_id){\n" +
                      "\t\t" + eq +
@@ -401,6 +396,57 @@ function getShadowShaderFunctions(objects){
            "\t\tnorm = vec3(0.0,0.0,0.0);\n" +
            "\t}\n";
     str += "\treturn norm;\n}\n";
+    
+    str += "bool doesShadowRayIntersect(vec4 rayOrigin, vec3 light){\n"+
+           "\tvec4 intersects[" + objects.length + "];\n" +
+           "\tvec3 dir = normalize(light.xyz - rayOrigin.xyz);\n"+
+           "\tvec3 newRayOrigin = rayOrigin.xyz + (dir * 0.00001);\n";
+    for(var i = 0; i < objects.length; i++){
+        if(objects[i] instanceof Plane){
+            str += "\tface plane" + i + "_faces[2];\n" +
+                   "\tplane" + i + "_faces[0] = plane" + i + "_triangle0;\n" + 
+                   "\tplane" + i + "_faces[1] = plane" + i + "_triangle1;\n";
+            str += "\tintersects[" + i + "] = getPlaneIntersection("+ 
+                   "newRayOrigin.xyz," +
+                   "dir," +
+                   "plane" + i + "_pointOnPlane.xyz," +
+                   "plane" + i + "_faces," +
+                   "plane" + i + "_normal," +
+                   "plane" + i + "_id" +
+                   ");\n";
+        } else if (objects[i] instanceof Sphere){
+            str += "\tintersects[" + i + "] = getSphereIntersection(newRayOrigin.xyz,"+
+                   "dir," +
+                   "sphere" + i + "_origin.xyz," +
+                   "sphere" + i + "_radius," +
+                   "sphere" + i + "_id" +
+                   ");\n";
+        }
+    }
+    str += "\tfor(int i = 0; i < " + objects.length + "; i++){\n" +
+           "\t\tif(intersects[i].w >= 0.0){\n" + 
+           "\t\t\treturn true;\n" +
+           "\t\t}\n" +
+           "\t}\n" +
+            "\treturn false;\n" +
+            "}\n\n";
+           
+    
+    return str;
+    
+    
+}
+
+function getShadowShaderCount(lights){
+    var str = "\tbool shadows[" + lights.length + "];\n\tfloat shadowCount = 0.0;\n"
+    for(var i = 0; i < lights.length; i++){
+        str += "\tshadows[" + i + "] = doesShadowRayIntersect(texture2D(intersections, vUv.xy), light"+ i +"_origin);\n";
+    }
+    str += "\tfor(int i = 0; i < " + lights.length + "; i++){\n" +
+           "\t\tif(shadows[i] == true){\n" + 
+           "\t\t\tshadowCount += 1.0;\n" +
+           "\t\t}\n" +
+           "\t}\n";
     return str;
 }
 
@@ -429,9 +475,9 @@ function getColorShaderIfStatement(objects){
         } else if(objects[i] instanceof Plane){
             qualifier = "plane" + i;
         } else {
-            break;
+            continue;
         }
-        var clause = "(intersection.w == " + qualifier + "_id){\n" +
+        var clause = "(intersection.w == " + qualifier + "_id && texture2D(normals, vUv.xy).w == 0.0){\n" +
                      "\t\tgl_FragColor = vec4(" + qualifier + "_color, 1.0);\n" +
                      "\t}";
         clauses.push(clause);
@@ -453,29 +499,23 @@ function getObjectIntersectionUniforms(geo, objectid){
         var tmp = {};
         tmp["sphere"+objectid+"_origin"] = {type: 'v3', value: geo.origin};
         tmp["sphere"+objectid+"_radius"] = {type: 'f', value: geo.radius};
-        tmp["sphere"+objectid+"_id"] = {type: 'i', value: objectid};
+        tmp["sphere"+objectid+"_id"] = {type: 'f', value: objectid};
         return tmp;
     } else if (geo instanceof Plane){
         var tmp = {};
         tmp["plane"+objectid+"_origin"] = {type: 'v3', value: geo.origin};
         tmp["plane"+objectid+"_normal"] = {type: 'v3', value: geo.normal};
         tmp["plane"+objectid+"_pointOnPlane"] = {type: 'v3', value: geo.vertices[0]};
-        tmp["plane"+objectid+"_id"] = {type: 'i', value: objectid};
+        tmp["plane"+objectid+"_id"] = {type: 'f', value: objectid};
         return tmp;
     }
     return null;
 }
 
 function getObjectShadowUniforms(geo, objectid){
-    if(geo instanceof Sphere){
+    if (geo instanceof Light){
         var tmp = {};
-        tmp["sphere"+objectid+"_origin"] = {type: 'v3', value: geo.origin};
-        tmp["sphere"+objectid+"_id"] = {type: 'f', value: objectid};
-        return tmp;
-    } else if (geo instanceof Plane){
-        var tmp = {};
-        tmp["plane"+objectid+"_normal"] = {type: 'v3', value: geo.normal};
-        tmp["plane"+objectid+"_id"] = {type: 'f', value: objectid};
+        tmp["light"+objectid+"_origin"] = {type: 'v3', value: geo.origin};
         return tmp;
     }
     return null;
@@ -497,7 +537,7 @@ function getObjectColorUniforms(geo, objectid){
 }
 
 
-function getRayTextures(rays, samplesize){
+function getRayTextures(rays, samplesize, gpgpu, width, height){
     
     var  rayOrigins    = new Float32Array( rays.length * rays[0].length * samplesize * 4 );
     var  rayDirections = new Float32Array( rays.length * rays[0].length * samplesize * 4 );
@@ -519,10 +559,35 @@ function getRayTextures(rays, samplesize){
         }
     }
     
-    var originTexture            = new THREE.DataTexture(rayOrigins, 400, 400, THREE.RGBAFormat, THREE.FloatType);
-    var directionTexture         = new THREE.DataTexture(rayDirections, 400, 400, THREE.RGBAFormat, THREE.FloatType);
+    var originTexture            = new THREE.DataTexture(rayOrigins, width, height, THREE.RGBAFormat, THREE.FloatType);
+    var directionTexture         = new THREE.DataTexture(rayDirections, width, height, THREE.RGBAFormat, THREE.FloatType);
     originTexture.needsUpdate    = true;
     directionTexture.needsUpdate = true;
     
-    return {origins: {type: 't', value: originTexture}, directions: {type: 't', value: directionTexture}}
+    var passthruFragShaderOrigins = "precision mediump float;\nuniform sampler2D origins;\n" +
+                                    "varying vec2 vUv;\n" +
+                                    "void main(){\n" +
+                                    "\tgl_FragColor = texture2D(origins, vUv.yx).xyzw;\n" +
+                                    "}\n";
+    var passthruFragShaderDirections = "precision mediump float;\nuniform sampler2D directions;\n" +
+                                    "varying vec2 vUv;\n" +
+                                    "void main(){\n" +
+                                    "\tgl_FragColor = texture2D(directions, vUv.yx).xyzw;\n" +
+                                    "}\n";
+    var originShaderMat = new THREE.ShaderMaterial({
+        uniforms: { origins: {type: 't', value: originTexture}},
+        vertexShader: document.getElementById("passThruShader").textContent,
+        fragmentShader: passthruFragShaderOrigins
+    });
+    
+    var directionShaderMat = new THREE.ShaderMaterial({
+        uniforms: { directions: {type: 't', value: directionTexture}},
+        vertexShader: document.getElementById("passThruShader").textContent,
+        fragmentShader: passthruFragShaderDirections
+    });
+
+    var originsRT = gpgpu.compute(originShaderMat);
+    var directionsRT = gpgpu.compute(directionShaderMat);                           
+    
+    return {origins: {type: 't', value: originsRT}, directions: {type: 't', value: directionsRT}}
 }

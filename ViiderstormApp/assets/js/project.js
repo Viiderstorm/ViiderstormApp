@@ -678,7 +678,8 @@ function init(){
     var rt      = new RayTracer(view, sc);
     var gp = new GPGPU(scr, 400, 400, rt);
     
-    var intersections = gp.getIntersections(getRayTextures(rt.view.getRays(), 1));
+    var raysAsUniforms = getRayTextures(rt.view.getRays(), 1, gp, 400, 400); 
+    var intersections = gp.getIntersections(raysAsUniforms);
     var normals       = gp.getShadows({intersections: {type: 't', value: intersections}});
     var colors        = gp.getColors({intersections: {type: 't', value: intersections},
                                       normals: {type: 't', value: normals},

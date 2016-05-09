@@ -505,11 +505,11 @@ function Scene(){
             var scale     = point.clone().add(direction.clone().multiplyScalar(0.0000000000001));
             var sRay = new Ray(scale, self.lights[i].origin.clone().sub(point).normalize());
             var iRay = self.getIntersection(sRay);
-            if(iRay != null && iRay.geometry.material.kt > 0.0){
-                intersections.push(null);
-            } else {
+            //if(iRay != null && iRay.geometry.material.kt > 0.0){
+            //    intersections.push(null);
+            //} else {
                 intersections.push(self.getIntersection(sRay));
-            }
+            //}
         }
         return intersections;
     }
@@ -652,7 +652,7 @@ function init(){
     var checkWidth = 10;
     var checkHeight = 25;
 
-    var sphereMat1 = new BasicMaterial(0x4FF5ff); //0x4FF5ff
+    var sphereMat1 = new BasicMaterial(0x1D1D1D); //0x4FF5ff
     sphereMat1.kt = 0.8;
     sphereMat1.n   = 0.95;
     var sphereMat2 = new BasicMaterial(0x1D1D1D);
@@ -664,38 +664,50 @@ function init(){
     var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, sphereMat2);
     var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, planeMat);
     var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
+    //var light2  = new Light(new THREE.Vector3(-0.5,8,6), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
 
     sc = new Scene();
     sc.add(sphere1);
     sc.add(sphere2);
     sc.add(plane1);
     sc.add(light1);
+    //sc.add(light2);
+    
     
     var scr = new SceneRenderer("WebGLCanvas", 400, 400);
     scr.init();
     
     var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-    var rt      = new RayTracer(view, sc);
+    var rt      = new RayTracer(view, sc, 15);
     var gp = new GPGPU(scr, 400, 400, rt);
     
+    var gpuTime, recursiveTime;
     var raysAsUniforms = getRayTextures(rt.view.getRays(), 1, gp, 400, 400); 
+    var start = new Date().getTime();
     var intersections = gp.getIntersections(raysAsUniforms);
-    var normals       = gp.getShadows({intersections: {type: 't', value: intersections}});
-    var colors        = gp.getColors({intersections: {type: 't', value: intersections},
-                                      normals: {type: 't', value: normals},
-                                      bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
-    //rt.renderUniform("renderCanvasUniform");
-    var arr = new Float32Array(400 * 400 * 4);
-    scr.scRenderer.readRenderTargetPixels(intersections,0,0,400,400,arr );
+    var end = new Date().getTime();
     
+    gpuTime = end-start;
+    //var normals       = gp.getShadows({intersections: {type: 't', value: intersections}});
+    //var colors        = gp.getColors({intersections: {type: 't', value: intersections},
+    //                                  normals: {type: 't', value: normals},
+    //                                  bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
+    start = new Date().getTime();
+    rt.renderUniform("renderCanvasUniform");
+    end = new Date().getTime();
+    recursiveTime = end-start;
+    //var arr = new Float32Array(400 * 400 * 4);
+    //scr.scRenderer.readRenderTargetPixels(intersections,0,0,400,400,arr );
     
+    console.log("gpuTime: " + gpuTime);
+    console.log("rectime: " + recursiveTime);
     
     //var imgD = rt.view.imagePlane.generateImage();
     //var convD = convertData(imgD, 400, 400);
-    scr.setFrame(colors);
+    scr.setFrame(intersections);
     scr.render();
-    var buff = new Float32Array(400 * 400 * 4)
-    scr.scRenderer.readRenderTargetPixels(colors, 0, 0, 400, 400, buff);
+    //var buff = new Float32Array(400 * 400 * 4)
+    //scr.scRenderer.readRenderTargetPixels(colors, 0, 0, 400, 400, buff);
     
     console.log("Hello");
         

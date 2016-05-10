@@ -636,7 +636,9 @@ function SceneRenderer(id,width, height){
     }
     self.init  = function(){
         self.scRenderer.setSize(self.width, self.height);
-        document.getElementById(id).appendChild(self.scRenderer.domElement);
+        var d = self.scRenderer.domElement;
+        d.id = "myCanvas";
+        document.getElementById(id).appendChild(d);
     }
     self.render = function(){
         self.scRenderer.render(self.scScene, self.scCamera);
@@ -645,70 +647,117 @@ function SceneRenderer(id,width, height){
 }
 
 /// INIT
-function init(){
-    
-    var sc;
+var sc;
 
-    var checkWidth = 10;
-    var checkHeight = 25;
+var checkWidth = 10;
+var checkHeight = 25;
 
-    var sphereMat1 = new BasicMaterial(0x1D1D1D); //0x4FF5ff
-    sphereMat1.kt = 0.8;
-    sphereMat1.n   = 0.95;
-    var sphereMat2 = new BasicMaterial(0x1D1D1D);
-    sphereMat2.kr = 0.95;
+var sphereMat1 = new BasicMaterial(0x1D1D1D); //0x4FF5ff
+sphereMat1.kt = 0.8;
+sphereMat1.n   = 0.95;
+var sphereMat2 = new BasicMaterial(0x1D1D1D);
+sphereMat2.kr = 0.95;
+var sphereMat3 = new BasicMaterial(0x777777);
+var sphereMat4 = new BasicMaterial(0x555566);
 
-    var planeMat   = new CheckerMaterial(0xff0000, 0xffff00, checkWidth, checkHeight);
+var planeMat   = new CheckerMaterial(0xff0000, 0xffff00, checkWidth, checkHeight);
+var planeMat2   = new CheckerMaterial(0xff0000, 0xffff00, checkWidth, checkHeight);
+var sphere1 = new Sphere(new THREE.Vector3(0,0.1,-1), 0.5, 50,50, sphereMat1);
+var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, sphereMat2);
+var sphere3 = new Sphere(new THREE.Vector3(-0.75,-0.3,-3), 0.45, 50,50, sphereMat3);
+var sphere4 = new Sphere(new THREE.Vector3(1,-0.3,-2), 0.45, 50,50, sphereMat2);
+var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, planeMat);
+//var plane2  = new Plane(new THREE.Vector3(-2,0,0), new THREE.Vector3(1,0,0), 4, 4, planeMat2);
+var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
+//var light2  = new Light(new THREE.Vector3(-0.5,8,6), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
 
-    var sphere1 = new Sphere(new THREE.Vector3(0,0.1,2), 0.5, 50,50, sphereMat1);
-    var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, sphereMat2);
-    var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, planeMat);
-    var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
-    //var light2  = new Light(new THREE.Vector3(-0.5,8,6), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
+sc = new Scene();
+sc.add(sphere1);
+sc.add(sphere2);
+sc.add(sphere3);
+sc.add(sphere4);
+sc.add(plane1);
+//sc.add(plane2);
+sc.add(light1);
+//sc.add(light2);
 
-    sc = new Scene();
-    sc.add(sphere1);
-    sc.add(sphere2);
-    sc.add(plane1);
-    sc.add(light1);
-    //sc.add(light2);
-    
-    
-    var scr = new SceneRenderer("WebGLCanvas", 400, 400);
-    scr.init();
-    
-    var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-    var rt      = new RayTracer(view, sc, 15);
-    var gp = new GPGPU(scr, 400, 400, rt);
-    
-    var gpuTime, recursiveTime;
-    var raysAsUniforms = getRayTextures(rt.view.getRays(), 1, gp, 400, 400); 
-    var start = new Date().getTime();
-    var intersections = gp.getIntersections(raysAsUniforms);
-    var end = new Date().getTime();
-    
-    gpuTime = end-start;
-    //var normals       = gp.getShadows({intersections: {type: 't', value: intersections}});
-    //var colors        = gp.getColors({intersections: {type: 't', value: intersections},
-    //                                  normals: {type: 't', value: normals},
-    //                                  bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
-    start = new Date().getTime();
-    rt.renderUniform("renderCanvasUniform");
-    end = new Date().getTime();
-    recursiveTime = end-start;
-    //var arr = new Float32Array(400 * 400 * 4);
-    //scr.scRenderer.readRenderTargetPixels(intersections,0,0,400,400,arr );
-    
-    console.log("gpuTime: " + gpuTime);
-    console.log("rectime: " + recursiveTime);
-    
-    //var imgD = rt.view.imagePlane.generateImage();
-    //var convD = convertData(imgD, 400, 400);
-    scr.setFrame(intersections);
-    scr.render();
-    //var buff = new Float32Array(400 * 400 * 4)
-    //scr.scRenderer.readRenderTargetPixels(colors, 0, 0, 400, 400, buff);
-    
-    console.log("Hello");
+
+var scr = new SceneRenderer("WebGLCanvas", 400, 400);
+scr.init();
+
+var interval;
+
+$(document).ready(function(){
+
+
+    $("#renderComparisonButton").click(function(){
         
-}
+        var bounceDepth = parseInt($("#bounceInput").val()) || 5;
+        var refractIndex = parseFloat($("#refractionInput").val()) || 0.95;
+        var reflectIndex = parseFloat($("#reflectionInput").val()) || 0.8;
+        sc.geometries[0].material.n = refractIndex;
+        sc.geometries[1].material.kr = reflectIndex;
+        
+        var time = 0;
+        var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
+        var rt      = new RayTracer(view, sc, bounceDepth);
+        var gp = new GPGPU(scr, 400, 400, rt);
+        var rayAsUniforms = getRayTextures(rt.view.getRays(), 1, gp, 400, 400);
+        
+        
+        var gpuTime, recursiveTime;
+        var start = new Date().getTime();
+        var gpuColors = gp.getIntersections(rayAsUniforms);
+        scr.setFrame(gpuColors);
+        scr.render();
+        var end = new Date().getTime();
+        gpuTime = end-start;
+        
+        start = new Date().getTime();
+        rt.renderUniform("renderCanvasUniform");
+        end = new Date().getTime();
+        recursiveTime = end-start;
+        $("#gpuTime").contents()[0].nodeValue  = gpuTime + "ms";
+        $("#recTime").contents()[0].nodeValue  = recursiveTime + "ms";
+    })
+    
+    $("#renderAnimationButton").click(function(){
+        
+        if(interval != undefined || interval != null){
+            clearInterval(interval);
+            interval = null;
+            $("#renderAnimationButton").contents()[0].nodeValue  = "Start Animation";
+        } else {
+            
+            var time = 0;
+            var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
+            var rt      = new RayTracer(view, sc, 20);
+            var gp = new GPGPU(scr, 400, 400, rt);
+            var rayAsUniforms = getRayTextures(rt.view.getRays(), 1, gp, 400, 400);
+            
+            $("#renderAnimationButton").contents()[0].nodeValue  = "Stop Animation";
+            var test = function(){
+                
+                sc.geometries[0].origin.z = Math.sin(time * 0.25) * 2;
+                var gpuTime, recursiveTime;
+                var start = new Date().getTime();
+                var gpuColors = gp.getIntersections(rayAsUniforms);
+                scr.setFrame(gpuColors);
+                scr.render();
+                var end = new Date().getTime();
+                gpuTime = end-start;
+                time+=1;
+                $("#gpuTime").contents()[0].nodeValue  = gpuTime + "ms";
+            }
+            
+            interval=setInterval(test, 1000/12);
+            
+        }
+        
+        
+        
+        
+    })
+
+
+})

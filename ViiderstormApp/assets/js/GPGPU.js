@@ -30,8 +30,7 @@ function GPGPU(SCR, width, height, rt){
     //init
     self.init                = function(){
         self.intersectionShader = self.getIntersectionShader(self.rayTracer.scene, self.rayTracer);
-        //self.shadowShader       = self.getShadowShader(self.rayTracer.scene);
-        //self.colorShader        = self.getColorShader(self.rayTracer.scene);
+        self.summationShader    = self.getSummationShader();
     }
     
     //class functions
@@ -40,17 +39,10 @@ function GPGPU(SCR, width, height, rt){
         var intersections = self.compute(self.intersectionShader); // vec4(x,y,z, objectIndex)
         return intersections;
     }
-    
-    self.getShadows = function(intersectionData){
-        self.updateUniforms(self.shadowShader, intersectionData );
-        var shadows = self.compute(self.shadowShader);
-        return shadows;
-    }
-    
-    self.getColors        = function(data){
-        self.updateUniforms(self.colorShader, data);
-        var colors        = self.compute(self.colorShader);
-        return colors;
+    self.getSummation = function(data){
+        self.updateUniforms(self.summationShader, data);
+        var finalColor = self.compute(self.summationShader); // vec4(x,y,z, objectIndex)
+        return finalColor;
     }
     
     self.compute          = function(shaderMat){
@@ -95,68 +87,14 @@ function GPGPU(SCR, width, height, rt){
         });
     }
     
-    self.getShadowShader = function(scene){
-        var sceneElems = scene.geometries;
-        var shader = "precision mediump float;\n" +
-                     "uniform sampler2D intersections;\n"+
-                     "varying vec2 vUv;\n";
-        
-        shader += getShaderObjectUniforms(sceneElems);
-        shader += getShadowShaderUniforms(scene.lights);
-        shader += getShaderObjectStructs(sceneElems);
-        shader += getShaderObjectIntersectionFunctions(sceneElems);
-        
-        shader += getShadowShaderFunctions(sceneElems);
-        
-        shader += "void main(){\n" +
-                  getShaderObjectStructInstances(sceneElems) +
-                  "\tvec3 norm = getNormalForIntersection(texture2D(intersections, vUv.xy).xyzw);\n" + 
-                  getShadowShaderCount(scene.lights) +
-                  "\tgl_FragColor = vec4(norm,shadowCount);\n" +
-                  "}\n"
-        
-        var uniforms = {};
-        for(var i = 0 ; i < sceneElems.length; i++){
-            uniforms = $.extend(uniforms, getObjectIntersectionUniforms(sceneElems[i], i));
-        }
-        for(var i = 0 ; i < scene.lights.length; i++){
-            uniforms = $.extend(uniforms, getObjectShadowUniforms(scene.lights[i], i));
-        }
-        
+    self.getSummationShader = function(){
+        var shader = "precision highp float; uniform sampler2D oldColors; uniform sampler2D newColors; uniform float weight; varying vec2 vUv;\n" +
+                     "void main(){ gl_FragColor = vec4(mix(texture2D(newColors, vUv.xy).xyz,texture2D(oldColors, vUv.xy).xyz, weight), 1.0);\n}"
         return new THREE.ShaderMaterial({
-            uniforms: uniforms,
+            uniforms: {},
             vertexShader: document.getElementById("passThruShader").textContent,
             fragmentShader: shader
-        });
-        
-        
-    }
-    
-    self.getColorShader   = function(scene){
-        var sceneElems = scene.geometries;
-        var shader = "precision mediump float;\n" +
-                     "uniform sampler2D intersections;\n" +
-                     "uniform sampler2D normals;\n" +
-                     "uniform vec3 bgColor;\n" +
-                     "varying vec2 vUv;\n";
-        for(var i = 0 ; i < sceneElems.length; i++){
-            shader += getColorShaderUniforms(sceneElems[i], i);
-        }
-        shader += "void main(){\n";
-        shader += "\tvec4 intersection = texture2D(intersections, vUv.xy);\n"
-        shader += getColorShaderIfStatement(sceneElems);
-        shader += "}\n";
-        var uniforms = {}
-        for(var i = 0 ; i < sceneElems.length; i++){
-            uniforms = $.extend(uniforms, getObjectColorUniforms(sceneElems[i], i));
-        }
-        
-        return new THREE.ShaderMaterial({
-            uniforms: uniforms,
-            vertexShader: document.getElementById("passThruShader").textContent,
-            fragmentShader: shader
-        });
-        
+        })
     }
     
     self.init();
@@ -562,11 +500,7 @@ function getColorShaderFunctions(scene, rt){
            "\tvec3 direction = texture2D(directions, vUv.xy).xyz;\n" +
            "\tvec3 colors["+(rt.bounces+1)+"];\n" +
            "\tfloat coeffs["+(rt.bounces+1)+"];\n";
-           
-   for(var i= 0; i < (rt.bounces+1); i++){
-       str += "\tcolors["+i+"] = vec3(0);\n"
-       str += "\tcoeffs["+i+"] = 0.0;\n"
-   }        
+
            
     str += "\tfor(int b = 0; b <= " + rt.bounces + "; b++){\n" +
            "\t\tvec4 intersection = findIntersection(ray.xyz, direction);\n"+

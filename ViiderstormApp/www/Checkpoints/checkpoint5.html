@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Viiderstorm</title>
+
+    <!-- Viewport mobile tag for sensible mobile support -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    
+    <!--  
+        Stylesheets and Preprocessors
+        ==============================
+
+        You can always bring in CSS files manually with `<link>` tags, or asynchronously
+        using a solution like AMD (RequireJS).  Or, if you like, you can take advantage 
+        of Sails' conventional asset pipeline (boilerplate Gruntfile).
+
+        By default, stylesheets from your `assets/styles` folder are included
+        here automatically (between STYLES and STYLES END). Both CSS (.css) and LESS (.less)
+        are supported. In production, your styles will be minified and concatenated into
+        a single file.
+        
+        To customize any part of the built-in behavior, just edit `tasks/pipeline.js`.
+        For example, here are a few things you could do:
+            
+            + Change the order of your CSS files
+            + Import stylesheets from other directories
+            + Use a different or additional preprocessor, like SASS, SCSS or Stylus
+    -->
+
+    <!--STYLES-->
+    <link rel="stylesheet" href="../styles/importer.css">
+    <link rel="stylesheet" href="../styles/page_styles.css">
+    <link rel="stylesheet" href="../styles/semantic.css">
+    <!--STYLES END-->
+    
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,300|Gruppo|Poiret+One|Exo+2:400,200|Alegreya+Sans:400,300' rel='stylesheet' type='text/css'>
+    
+    <script data-main="../js/dependencies/main" src="../js/dependencies/require.js"></script>
+  </head>
+
+  <body id="main-body">
+    <div class="ui thin sidebar inverted vertical menu" style="color:white;background:#333333">
+            <a class="item" href="../index.html" style="font-family:'Poiret One', cursive; font-size:150%">Viiderstorm</a>
+            <div class="item">
+                <div class="header" style="color: white;">
+                    Assignments
+                </div>
+                <div class="menu">
+                    <a class="item" href="checkpoint1.html"> Checkpoint 1</a>
+                    <a class="item" href="checkpoint2.html"> Checkpoint 2</a>
+                    <a class="item" href="checkpoint3.html"> Checkpoint 3</a>
+                    <a class="item" href="checkpoint4.html"> Checkpoint 4</a>
+                    <a class="item" href="checkpoint5.html"> Checkpoint 5</a>
+                    <a class="item" href="checkpoint6.html"> Checkpoint 6</a>
+                    <a class="item" href="checkpoint7.html"> Checkpoint 7</a>
+                </div>
+            </div>
+            <div class="item">
+                <div class="header">
+                    Project
+                </div>
+                <div class="menu">
+                    <a class="item" href="../Project/proposal.html"> Proposal </a>
+                    <a class="item" href="../Project/project.html"> Demo </a>
+                </div>
+            </div>
+    </div>
+    <div id="content-div-background" class="pusher">
+        <div class="ui huge launch right attached button" style="color:white;background:#333333; margin-top: 30px;">
+            <i class="icon list layout"></i>
+            <span class="text" style="display:none;">Menu</span>
+        </div>
+        <div  class="ui stackable grid container">
+        
+            <div class="sixteen wide column" data-bind='component: "checkpoint1"'>
+               
+<!-- BEGIN -->
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Checkpoint 5 </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Reflection - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Overview</h1>
+    </div>
+    <div class="row">
+        <div class="eleven wide column">
+            <p>Now we're going to add recursive ray tracing and reflectivity to our scene.</p>
+            <p>This checkpoint is also very short and sweet. A few modifications I made from the previous checkpoint:</p>
+            <ul>
+                <li> Pull out the original ray tracing code into a recursive function </li>
+                <li> Add reflectivity to the ray tracing for loop </li>
+                <li> Add reflectivity to the scene objects </li>
+                <li> Change Sphere #2 and the Background colors to brighter, more interesting shades </li>
+                <li> Add more controls for interacting with the scene </li>   
+            </ul>
+            <p> And done.</p>
+        </div>
+        <div class="five wide column">
+            <img src="../images/ProcTexture.PNG" width="300px" height="300px"></img>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <h1>Rendering</h1>
+    </div>
+    <div class="row">
+        <h4> Reflective Sphere #2, bounce depth of 5, SPP of 1.</h4>
+    </div>
+    <div class="row">
+        <div class="six wide column"> 
+            <img src="../images/ReflectionImage.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="seven wide column">
+            <div class="row">
+                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+        <div class="three wide column">
+            <div class="row">
+                <div id="bounceInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Bounce Depth</div>
+                    <input id="bounceInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="sphereOneInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Sphere 1 Reflectivity</div>
+                    <input type="checkbox" id="sphereOneToggleInput" style="float:right" name="public">
+                </div>
+                <div id="sphereTwoInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Sphere 2 Reflectivity</div>
+                    <input type="checkbox" id="sphereTwoToggleInput" style="float:right" name="public">
+                </div>
+                <div id="samplePerPixelInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Samples Per Pixel</div>
+                    <input id="samplePerPixelInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div style="margin-top: 30px;" class="ui button" id="renderButtonUniform">Render</div>
+            </div>
+        </div>
+    </div>
+    
+            
+</div>
+
+<div class="ui divider " ></div>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['../js/checkpoint5.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>
+
+<!-- END --> 
+            </div>
+        
+        </div>
+
+        <!--
+            Client-side Templates
+            ========================
+
+            HTML templates are important prerequisites of modern, rich client applications.
+            To work their magic, frameworks like Backbone, Angular, Ember, and Knockout require
+            that you load these templates client-side.
+
+            By default, your Gruntfile is configured to automatically load and precompile
+            client-side JST templates in your `assets/templates` folder, then
+            include them here automatically (between TEMPLATES and TEMPLATES END).
+            
+            To customize this behavior to fit your needs, just edit `tasks/pipeline.js`.
+            For example, here are a few things you could do:
+
+                + Import templates from other directories
+                + Use a different template engine (handlebars, jade, dust, etc.)
+                + Internationalize your client-side templates using a server-side
+                stringfile before they're served.
+        -->
+
+        <!--TEMPLATES-->
+        
+        <!--TEMPLATES END-->
+
+
+        <!--
+
+        Client-side Javascript
+        ========================
+
+        You can always bring in JS files manually with `script` tags, or asynchronously
+        on the client using a solution like AMD (RequireJS).  Or, if you like, you can 
+        take advantage of Sails' conventional asset pipeline (boilerplate Gruntfile).
+
+        By default, files in your `assets/js` folder are included here
+        automatically (between SCRIPTS and SCRIPTS END).  Both JavaScript (.js) and
+        CoffeeScript (.coffee) are supported. In production, your scripts will be minified
+        and concatenated into a single file.
+        
+        To customize any part of the built-in behavior, just edit `tasks/pipeline.js`.
+        For example, here are a few things you could do:
+            
+            + Change the order of your scripts
+            + Import scripts from other directories
+            + Use a different preprocessor, like TypeScript
+
+        -->
+    </div>
+
+    <div class="ui inverted vertical footer segment form-page" style="color:white;background:#2F2F2F">
+        <div class="ui center aligned container">
+            <h1 style="font-family: 'Poiret One', cursive; font-size:150%">Viiderstorm</h1>
+            <div>
+                Hosted at <a href="https://asmallorange.com/" target="_blank">A Small Orange</a>
+            </div>
+        </div>
+    </div>
+    
+    
+  </body>
+</html>

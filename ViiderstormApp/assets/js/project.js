@@ -8,11 +8,12 @@
 // --Light
 // --Scene
 
-function RayTracer(view, scene, supersample){
+function RayTracer(view, scene, bounces, supersample){
     var self = this;
     self.view        = view;
     self.scene       = scene;
     self.rays        = null;
+    self.bounces     = bounces;
     
     self.renderRandom = function(canvasId, supersample){
         self.rays = self.view.getRaysRandom(supersample);
@@ -24,6 +25,85 @@ function RayTracer(view, scene, supersample){
         self.render(canvasId);
     }
     
+    self.illuminate    = function(ray, depth){
+        var color;
+        var intersection = self.scene.getIntersection(ray);
+        if(intersection == null){
+            color = self.scene.backgroundColor.clone();
+        } else {
+            var shadowIntersection = self.scene.getShadowIntersectionsFromPoint(intersection.point);
+            var ambientLight = self.scene.getAmbientLight(intersection, intersection.geometry.material.ka);
+            if(!arrayIsNull(shadowIntersection)){
+                color = ambientLight;
+            } else {
+                //ray intersection not in any shadow
+                var diffuseLight  = self.scene.getDiffuseLight(intersection, intersection.geometry.material.kd);
+                var specularLight = self.scene.getSpecularLight(intersection, ray, intersection.geometry.material.ks); 
+                var tmpColor      = new THREE.Color(0x000000);
+                tmpColor.add(ambientLight);
+                tmpColor.add(diffuseLight);
+                tmpColor.add(specularLight);
+                color = tmpColor;
+            }
+            if( depth > 0){
+                if(intersection.geometry.material.kr > 0.0){
+                    
+                    //Move the intersection point a bit closer to the view
+                    var distance   = ray.direction.clone().negate().normalize().multiplyScalar(0.0000000000001);
+                    intersection.point.add(distance);
+                    
+                    //create new ray
+                    var tmp        =  intersection.normal.clone().multiplyScalar(2 * ray.direction.clone().dot(intersection.normal));
+                    var reflectRay = new Ray(intersection.point.clone(), ray.direction.clone().sub(tmp));
+                    color = color.add(self.illuminate(reflectRay, depth - 1).multiplyScalar(intersection.geometry.material.kr));
+                }
+                if(intersection.geometry.material.kt > 0.0){
+                    
+                    //Move the intersection point a bit in the ray direction
+                    var distance   = ray.direction.clone().normalize().multiplyScalar(0.0000000000001);
+                    intersection.point.add(distance);
+                    
+                    var ni, nt, nit, D, N;
+                    
+                    ni = 1.0;
+                    nt = intersection.geometry.material.n;
+                    
+                    D = ray.direction.clone();
+                    N = intersection.normal.clone();
+                    DvN = D.clone().negate().dot(N);
+                    
+                    //inside-outside test
+                    if( DvN < 0){
+                        ni = intersection.geometry.material.n; //inside
+                        nt = 1.0; //outside
+                        N = N.negate();
+                        DvN = D.clone().negate().dot(N);
+                    }
+                    
+                    nit = ni/nt;
+                    var discrim         = Math.sqrt( 1 + (Math.pow(nit, 2) * ( Math.pow(DvN, 2) - 1 )))
+                    var reflectRayDirection      = D.clone().multiplyScalar(nit).add( N.clone().multiplyScalar((DvN * nit) - discrim) ); 
+                    
+                    //Total internal reflection
+                    if(discrim < 0){
+                        //create new ray
+                        var tmp        =  intersection.normal.clone().multiplyScalar(2 * ray.direction.clone().dot(intersection.normal));
+                        reflectRayDirection = ray.direction.clone().sub(tmp);
+                    }
+                    
+                    // var distanceForward   = reflectRayDirection.clone().negate().normalize().multiplyScalar(0.0000000000001);
+                    // intersection.point.add(distanceForward);
+                    
+                    var reflectRay = new Ray(intersection.point.clone(), reflectRayDirection);
+                    
+                    transmitColor = self.illuminate(reflectRay, depth - 1).multiplyScalar(intersection.geometry.material.kt);
+                    color = color.add(transmitColor);
+                }
+            }
+        }
+        return color;
+    }
+    
     self.render      = function(canvasId){
         for(var i = 0; i < self.rays.length; i++){
             for(var k = 0; k < self.rays[i].length; k++){
@@ -32,34 +112,7 @@ function RayTracer(view, scene, supersample){
                 
                 //supersampling ray loop
                 for(var z = 0; z < self.rays[i][k].length; z++){
-                    var intersection = self.scene.getIntersection(self.rays[i][k][z]);
-                    if(intersection != null){
-                        
-                        var ambientLight =  self.scene.getAmbientLight(intersection, 0.5);
-                        
-                        var shadowIntersections = self.scene.getShadowIntersectionsFromPoint(intersection.point);
-                        if(!arrayIsNull(shadowIntersections)){
-                            
-                            //ray intersection is in atleast 1 shadow, maybe more.
-                            colorSamples.push(ambientLight);
-                            
-                        } else {
-                            
-                            //ray intersection not in any shadow
-                            var diffuseLight  = self.scene.getDiffuseLight(intersection, 0.4);
-                            var specularLight = self.scene.getSpecularLight(intersection, self.rays[i][k][z], 0.2); 
-                            var tmpColor      = new THREE.Color(0x000000);
-                            tmpColor.add(ambientLight);
-                            tmpColor.add(diffuseLight);
-                            tmpColor.add(specularLight);
-                            colorSamples.push(tmpColor);
-                            
-                        }
-                    } else {
-                        
-                        //ray hits background
-                        colorSamples.push(self.scene.backgroundColor);
-                    }
+                    colorSamples.push(self.illuminate(self.rays[i][k][z], self.bounces));
                 }
                 
                 var finalColor = self.averageColor(colorSamples)
@@ -202,12 +255,13 @@ function Sphere(origin, radius, widthSegments, heightSegments, material){
     self.origin    = origin;
     self.radius    = radius;
     self.mesh      = (function(){
-        var mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, widthSegments, heightSegments), material)
+        var mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, widthSegments, heightSegments), new THREE.MeshNormalMaterial())
         mesh.geometry.applyMatrix(new THREE.Matrix4().makeTranslation(origin.x, origin.y, origin.z));
         return mesh;
     })();
     self.vertices  = self.mesh.geometry.vertices;
     self.faces     = self.mesh.geometry.faces;
+    self.material  = material;
     self.translate = function(magnitudes){
         self.mesh.geometry.applyMatrix(new THREE.Matrix4().makeTranslation(magnitudes.x, magnitudes.y, magnitudes.z));
         self.origin.add(magnitudes);
@@ -251,50 +305,6 @@ function Sphere(origin, radius, widthSegments, heightSegments, material){
 
         return null;
     }
-    self.getShaderCode  = function(objectIdNumber){
-        var qualifier = function(s){
-            var i = "sphere" + objectIdNumber + "_"; //sphereN_
-            return i + s;   
-        }
-        var origin    =  "uniform vec3 " + qualifier("origin") + ";\n";// uniform vec3 sphereN_origin;
-        var radius    =  "uniform float " + qualifier("radius") +";\n";// uniform float sphereN_radius;
-        var id        =  "uniform int " + qualifier("id") + ";\n";// uniform float sphereN_id;
-        var intersect_uniforms  = {}
-        intersect_uniforms[qualifier("origin")] = {type: 'v3', value: self.origin};
-        intersect_uniforms[qualifier("radius")] = {type: 'f', value: self.radius};
-        intersect_uniforms[qualifier("id")] = {type: 'i', value: objectIdNumber};
-        
-        var color_uniforms = {}
-        color_uniforms[qualifier("id")] = {type: 'f', value: objectIdNumber};
-        color_uniforms[qualifier("color")] = {type: 'c', value: self.mesh.material.color};
-        
-        var func_header = "vec4 " + qualifier("getIntersection") + "(vec3 rayOrigin, vec3 rayDirection){\n";
-        var func_contentA = "\tfloat A = pow(rayDirection.x, 2.0) + pow(rayDirection.y, 2.0) + pow(rayDirection.z, 2.0);\n"
-        var func_contentB = "\tfloat B = 2.0 * ((rayDirection.x * (rayOrigin.x - " + qualifier("origin") + ".x)) +" +
-                                           "(rayDirection.y * (rayOrigin.y - " + qualifier("origin") + ".y)) +" +
-                                           "(rayDirection.z * (rayOrigin.z - " + qualifier("origin") + ".z)));\n";
-        var func_contentC = "\tfloat C = pow(rayOrigin.x - " + qualifier("origin") + ".x, 2.0) + " +
-                                       "pow(rayOrigin.y - " + qualifier("origin") + ".y, 2.0) + " +
-                                       "pow(rayOrigin.z - " + qualifier("origin") + ".z, 2.0) - " +
-                                       "pow(" + qualifier("radius") + ", 2.0);\n";
-        var func_contentW1 = "\tfloat W1 = (-B - sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n";
-        var func_contentW2 = "\tfloat W2 = (-B + sqrt(pow(B, 2.0) - (4.0 * A * C))) / (2.0 * A);\n";
-        var func_contentW  = "\tfloat W  = W1 > 0.0 ? W1 : W2;\n";
-        var func_contentif        = "\tif( W > 0.0 ){\n \t\treturn vec4(rayOrigin + (rayDirection * W), "+qualifier("id") +");\n\t} else {\n \t\treturn vec4(0,0,0,-1);\n\t}\n}\n";                               
-        
-        var boilerCode   = origin + radius + id;
-        var functionCode =  func_header + func_contentA + 
-                            func_contentB + func_contentC + func_contentW1 + 
-                            func_contentW2 + func_contentW + func_contentif;
-        var r = { qualifier: qualifier , 
-                  intersect_uniforms: intersect_uniforms,
-                  boilerCode: boilerCode, 
-                  functionCode: functionCode, 
-                  color_uniforms: color_uniforms }; 
-        return r;
-        
-        
-    }
     
 }
 
@@ -305,7 +315,7 @@ function Plane(origin, normal, width, height, material){
     self.width        = width;
     self.height       = height;
     self.mesh         = (function(){
-        var mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material)
+        var mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshNormalMaterial())
         var curNorm = mesh.geometry.faces[0].normal;
         var angle = curNorm.angleTo(self.normal);
         mesh.geometry.applyMatrix(new THREE.Matrix4().makeRotationAxis( curNorm.clone().cross(self.normal), angle));
@@ -314,6 +324,7 @@ function Plane(origin, normal, width, height, material){
     })();
     self.vertices     = self.mesh.geometry.vertices;
     self.faces        = self.mesh.geometry.faces;
+    self.material     = material;
     self.translate    = function(magnitudes){
         self.mesh.geometry.applyMatrix(new THREE.Matrix4().makeTranslation(magnitudes.x, magnitudes.y, magnitudes.z));
         self.origin.add(magnitudes);
@@ -359,103 +370,6 @@ function Plane(origin, normal, width, height, material){
         }
         return false;
     }
-    
-    self.getShaderCode = function(objectIdNumber){
-        var qualifier = function(s){
-            var i = "plane" + objectIdNumber + "_";
-            return i + s;   
-        }
-        
-        var faceToVec2Str = function(s){
-            var p1 = "vec3(" + self.vertices[s.a].x + "," + self.vertices[s.a].y + "," + self.vertices[s.a].z + ")";
-            var p2 =  "vec3(" + self.vertices[s.b].x + "," + self.vertices[s.b].y + "," + self.vertices[s.b].z + ")";
-            var p3 =  "vec3(" + self.vertices[s.c].x + "," + self.vertices[s.c].y + "," + self.vertices[s.c].z + ")";
-            return [p1,p2,p3].join(',');
-        }
-        
-        var origin    =  "uniform vec3 " + qualifier("origin") + ";\n";// uniform vec3 planeN_origin;
-        var normal = "uniform vec3 " + qualifier("normal") + ";\n";//uniform vec3 planeN_normal;
-        var pointOnPlane = "uniform vec3 " + qualifier("pointOnPlane") + ";\n";//uniform vec2 planeN_pointOnPlane;
-        var id        =  "uniform int " + qualifier("id") + ";\n";// uniform float planeN_id;
-        var faces     = "struct " + qualifier("face") + "{\n" +
-                        "\t vec3 point1;\n" +
-                        "\t vec3 point2;\n" + 
-                        "\t vec3 point3;\n" +
-                        "}";
-        var faceInstances = []                        
-        for(var i = 0; i < self.faces.length; i++){
-            faceInstances.push( qualifier("face_tri") + i);
-        }
-        faces += faceInstances.join(",") + ";\n";
-        
-        var faceDefine = "\t" +qualifier("face") + " " + qualifier("faces") + "[" + self.faces.length + "];\n"; 
-        for(var i = 0; i < self.faces.length; i++){
-            faceDefine += "\t" + qualifier("face_tri") + i + " = " + qualifier("face") + "(" + faceToVec2Str(self.faces[i]) + ");\n";
-            faceDefine += "\t" + qualifier("faces") + "[" + i + "] = " + qualifier("face_tri") + i  + ";\n";
-        }
-        
-        var func1 = "vec4 " + qualifier("getIntersection") + 
-                    "(vec3 rayOrigin, vec3 rayDirection," + qualifier("face") + "[" + self.faces.length + "] faces){\n";
-        var func1_content1 = "\tvec3 rayToPoint = rayOrigin - " + qualifier("pointOnPlane") + ";\n";
-        var func1_content2 = "\tfloat denom = dot(" + qualifier("normal") + ", " + "rayDirection);\n";
-        var func1_content3 = "\tfloat num   = dot(rayToPoint, " + qualifier("normal") + ");\n";
-        var func1_content4 = "\tfloat t     = -(num/denom);\n";
-        var func1_content5 = "\tif(t >= 0.00000001){\n" +
-                             "\t\tvec4 intersectionPoint = vec4(rayOrigin + (rayDirection * t)," + objectIdNumber + ");\n" +
-                             "\t\tbool triangleCheck1;\n" +
-                             "\t\tbool triangleCheck2;\n" +
-                             "\t\ttriangleCheck1 = " + qualifier("isPointInPlane") + "(intersectionPoint.xyz, faces[0]);\n" +
-                             "\t\ttriangleCheck2 = " + qualifier("isPointInPlane") + "(intersectionPoint.xyz, faces[1]);\n" +
-                             "\t\tif(triangleCheck1 || triangleCheck2){\n" +
-                             "\t\t\t return intersectionPoint;\n" +
-                             "\t\t}\n" +
-                             "\t}\n" +
-                             "\treturn vec4(0,0,0,-1);\n";
-        var func1_end = "}\n"
-        
-        var func2 = "bool " + qualifier("isPointInPlane") + "(vec3 intersectionPoint," + qualifier("face") + " tri){\n";
-        for(var i = 0; i < 3; i++){
-            func2 += "\tvec3 linestoVertices" + i + " = tri.point" + (i+1) + " - intersectionPoint;\n"
-        }
-        for(var i = 0; i < 3; i++){
-            func2 += "\tfloat sum" + i + " = degrees(acos( dot(normalize(linestoVertices" + i + "), normalize(linestoVertices" + ((i+1)%3) + "))));\n";
-        }
-        func2 += "\tfloat totalSum = ";
-        var sums = [];
-        for(var i = 0; i < 3; i++){
-            sums.push("sum" + i);
-        }
-        func2 += sums.join("+") + ";\n"
-        func2 += "\tif(abs(totalSum - 360.0) < 0.1){\n" +
-                 "\t\t return true;\n" +
-                 "\t} else {\n" +
-                 "\t\t return false;\n" +
-                 "\t}\n";
-        func2_end = "}\n";
-                         
-        var intersect_uniforms = {};
-        intersect_uniforms[qualifier("origin")] = {type: 'v3', value: self.origin};
-        intersect_uniforms[qualifier("normal")] = {type: 'v3', value: self.normal};
-        intersect_uniforms[qualifier("pointOnPlane")] = {type: 'v3', value: self.vertices[0]};
-        intersect_uniforms[qualifier("id")] = {type: 'i', value: objectIdNumber};
-        
-        var color_uniforms = {};
-        color_uniforms[qualifier("id")] = {type: 'f', value: objectIdNumber};
-        color_uniforms[qualifier("color")] = {type: 'c', value: self.mesh.material.color};
-        
-        var boilerCode = origin + normal + pointOnPlane + id + faces;
-        var functionCode = func2 + func2_end;
-        functionCode += func1 + func1_content1 + func1_content2 + func1_content3 + func1_content4 + func1_content5 + func1_end;
-        
-        var r = {qualifier: qualifier,
-                 intersect_uniforms: intersect_uniforms, 
-                 boilerCode:boilerCode, 
-                 functionCode: functionCode, 
-                 faceDefine: faceDefine, 
-                 color_uniforms: color_uniforms};
-        
-        return r
-    }
 }
 
 function Light(origin, intensity, color){
@@ -465,9 +379,77 @@ function Light(origin, intensity, color){
     self.origin                = origin;
 }
 
-
-
 ///END SCENE OBJECTS
+
+///BEGIN MATERIAL OBJECTS
+
+function BasicMaterial(color){
+    var self = this;
+    
+    self.ka = 0.4;
+    self.kd = 0.5;
+    self.ks = 0.2;
+    self.ke = 20.0;
+    self.kr = 0.0;
+    self.kt = 0.0;
+    self.n = 0.0;
+    
+    
+    self.color1    = new THREE.Color(color);
+    self.getColor = function(intersection){
+        return self.color1;
+    }
+}
+
+function CheckerMaterial(color1, color2, widthInChecks, heightInChecks){
+    var self = this;
+    
+    self.ka = 0.4;
+    self.kd = 0.5;
+    self.ks = 0.2;
+    self.ke = 20.0;
+    self.kr = 0.0;
+    self.kt = 0.0;
+    self.n = 0.0;
+    
+    self.color1            = new THREE.Color(color1);
+    self.color2            = new THREE.Color(color2);
+    self.wChecks           = widthInChecks;
+    self.hChecks           = heightInChecks;
+    self.getColor          = function (intersection){
+        switch(intersection.geometry.constructor.name){
+            case "Sphere":
+                return self.getSphereColor(intersection);
+            case "Plane":
+                return self.getPlaneColor(intersection);
+            default:
+                throw new Error("Material not defined for Scene Object: " + intersection.geometry.constructor.name); 
+        }
+    }
+    self.getPlaneColor = function(intersection){
+        var backCorner      = intersection.geometry.vertices[0].clone();
+        var widthVector     = intersection.geometry.vertices[1].clone().sub(backCorner).normalize();
+        var intersectVector = intersection.point.clone().sub(backCorner);
+        var h               = intersectVector.length();
+        var theta           = intersectVector.angleTo(widthVector);
+        var width           = h * Math.cos(theta);
+        var height          = h * Math.sin(theta);
+        var x               = width / intersection.geometry.width;
+        var y               = height / intersection.geometry.height;
+        var isEvenCol       = ((Math.round(x / (1/self.wChecks))) % self.wChecks) % 2 == 0
+        var isEvenRow       = ((Math.round(y / (1/self.hChecks))) % self.hChecks) % 2 == 0
+        if(isEvenCol == isEvenRow){
+            return self.color1;
+        }
+        return self.color2;
+    }
+    
+    self.getSphereColor = function(intersection){
+        return self.color1; 
+    }  
+}
+
+//END MATERIAL OBJECTS
 
 ///BEGIN SCENE
 
@@ -475,7 +457,7 @@ function Scene(){
     var self = this;
     self.geometries      = []
     self.lights          = []
-    self.backgroundColor = new THREE.Color(0x000000)
+    self.backgroundColor = new THREE.Color(0x4392FC)
     self.add             = function(object){
         if(object instanceof Light){
             self.lights.push(object);
@@ -522,7 +504,12 @@ function Scene(){
             //This keeps errors from occuring during the shadow intersection calculations.
             var scale     = point.clone().add(direction.clone().multiplyScalar(0.0000000000001));
             var sRay = new Ray(scale, self.lights[i].origin.clone().sub(point).normalize());
-            intersections.push(self.getIntersection(sRay));
+            var iRay = self.getIntersection(sRay);
+            //if(iRay != null && iRay.geometry.material.kt > 0.0){
+            //    intersections.push(null);
+            //} else {
+                intersections.push(self.getIntersection(sRay));
+            //}
         }
         return intersections;
     }
@@ -534,7 +521,7 @@ function Scene(){
             ambientColor.add( self.lights[i].color.clone().multiplyScalar(comp)  );   
         }
         
-        return ambientColor.multiply(rayIntersection.geometry.mesh.material.color).multiplyScalar(constant)
+        return ambientColor.multiply(rayIntersection.geometry.material.getColor(rayIntersection)).multiplyScalar(constant)
     }
     self.getDiffuseLight  = function(rayIntersection, constant){
         var diffuseLight = new THREE.Color(0x000000);
@@ -542,7 +529,7 @@ function Scene(){
             var pointToLight = self.lights[i].origin.clone().sub(rayIntersection.point).normalize();
             var scalarVals   = pointToLight.clone().dot(rayIntersection.normal);
             var tmpColor     = self.lights[i].intensity.clone();
-            var objectColor  = rayIntersection.geometry.mesh.material.color;
+            var objectColor  = rayIntersection.geometry.material.getColor(rayIntersection);
             var finalColor   = tmpColor.multiply(objectColor).multiplyScalar(scalarVals);
             diffuseLight.add(finalColor);
         }
@@ -553,7 +540,7 @@ function Scene(){
         for(var i = 0; i < self.lights.length; i++){
             var reflection    = getReflection(rayIntersection, self.lights[i]).normalize();
             var viewDirection = ray.direction.clone().negate();
-            var scalarVals    = Math.pow(reflection.dot(viewDirection), 30);
+            var scalarVals    = Math.pow(reflection.dot(viewDirection), rayIntersection.geometry.material.ke);
             var tmpColor      = self.lights[i].intensity.clone();
             var finalColor    = tmpColor.multiplyScalar(scalarVals);
             specularLight.add(finalColor);
@@ -563,6 +550,12 @@ function Scene(){
 }
 
 ///END SCENE
+
+
+
+
+
+
 
 
 
@@ -605,15 +598,7 @@ function getReflection(rayIntersection, light){
     return scaleNormal.sub(pointToLight); 
 }
 
-function flattenArray(arr){
-    var concat = function(a,b){
-        return a.concat(b);
-    }
-    var tmpArr = arr.reduce(concat).reduce(concat).reduce(concat);
-}
-
 /// END UTIL
-
 
 function SceneRenderer(id,width, height){
     var self = this;
@@ -651,7 +636,9 @@ function SceneRenderer(id,width, height){
     }
     self.init  = function(){
         self.scRenderer.setSize(self.width, self.height);
-        document.getElementById(id).appendChild(self.scRenderer.domElement);
+        var d = self.scRenderer.domElement;
+        d.id = "myCanvas";
+        document.getElementById(id).appendChild(d);
     }
     self.render = function(){
         self.scRenderer.render(self.scScene, self.scCamera);
@@ -659,150 +646,118 @@ function SceneRenderer(id,width, height){
     
 }
 
-
-
-/// PARALLEL
-
-function getRayTextures(rays, samplesize){
-    
-    var  rayOrigins    = new Float32Array( rays.length * rays[0].length * samplesize * 4 );
-    var  rayDirections = new Float32Array( rays.length * rays[0].length * samplesize * 4 );
-    
-    var count = 0;
-    for(var row = 0; row < rays.length; row++){
-        for(var col = 0; col < rays[row].length; col++){
-            for(var sample = 0; sample < samplesize; sample++){
-                rayOrigins[count] = rays[row][col][sample].origin.x;
-                rayOrigins[count+1] = rays[row][col][sample].origin.y;
-                rayOrigins[count+2] = rays[row][col][sample].origin.z;
-                rayOrigins[count+3] = 1;
-                rayDirections[count] = rays[row][col][sample].direction.x;
-                rayDirections[count+1] = rays[row][col][sample].direction.y;
-                rayDirections[count+2] = rays[row][col][sample].direction.z;
-                rayDirections[count+3] = 1;
-                count += 4;
-            }
-        }
-    }
-    
-    var originTexture            = new THREE.DataTexture(rayOrigins, 400, 400, THREE.RGBAFormat, THREE.FloatType);
-    var directionTexture         = new THREE.DataTexture(rayDirections, 400, 400, THREE.RGBAFormat, THREE.FloatType);
-    originTexture.needsUpdate    = true;
-    directionTexture.needsUpdate = true;
-    
-    return {origins: {type: 't', value: originTexture}, directions: {type: 't', value: directionTexture}}
-}
-
-/// END PARALLEL
-
 /// INIT
-
 var sc;
-var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
-var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
-var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
+var checkWidth = 10;
+var checkHeight = 25;
 
-var sphere1 = new Sphere(new THREE.Vector3(0,0.1,2), 0.5, 50,50, material2);
-var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, material3);
-var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, material1);
+var sphereMat1 = new BasicMaterial(0x1D1D1D); //0x4FF5ff
+sphereMat1.kt = 0.8;
+sphereMat1.n   = 0.95;
+var sphereMat2 = new BasicMaterial(0x1D1D1D);
+sphereMat2.kr = 0.95;
+var sphereMat3 = new BasicMaterial(0x777777);
+var sphereMat4 = new BasicMaterial(0x555566);
+
+var planeMat   = new CheckerMaterial(0xff0000, 0xffff00, checkWidth, checkHeight);
+var planeMat2   = new CheckerMaterial(0xff0000, 0xffff00, checkWidth, checkHeight);
+var sphere1 = new Sphere(new THREE.Vector3(0,0.1,-1), 0.5, 50,50, sphereMat1);
+var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, sphereMat2);
+var sphere3 = new Sphere(new THREE.Vector3(-0.75,-0.3,-3), 0.45, 50,50, sphereMat3);
+var sphere4 = new Sphere(new THREE.Vector3(1,-0.3,-2), 0.45, 50,50, sphereMat2);
+var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, planeMat);
+//var plane2  = new Plane(new THREE.Vector3(-2,0,0), new THREE.Vector3(1,0,0), 4, 4, planeMat2);
 var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
+//var light2  = new Light(new THREE.Vector3(-0.5,8,6), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
 
 sc = new Scene();
 sc.add(sphere1);
 sc.add(sphere2);
+sc.add(sphere3);
+sc.add(sphere4);
 sc.add(plane1);
+//sc.add(plane2);
 sc.add(light1);
+//sc.add(light2);
 
 
-var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
+var scr = new SceneRenderer("WebGLCanvas", 400, 400);
+scr.init();
+
+var interval;
+
+$(document).ready(function(){
 
 
-function init(){
-    
-    var sc;
-    var material1 = new THREE.MeshBasicMaterial({ color: 0x2194ce });
-    var material2 = new THREE.MeshBasicMaterial({ color: 0x4FF5ff });
-    var material3 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-
-
-    var sphere1 = new Sphere(new THREE.Vector3(0,0.1,2), 0.5, 50,50, material2);
-    var sphere2 = new Sphere(new THREE.Vector3(-0.75,-0.3,1), 0.45, 50,50, material3);
-    var sphere3 = new Sphere(new THREE.Vector3(-0.75,0.5,1), 0.45, 50,50, material3);
-    var plane1  = new Plane(new THREE.Vector3(-0.5,-1,0), new THREE.Vector3(0,1,0), 4, 20, material1);
-    var light1  = new Light(new THREE.Vector3(0.5,4,10), new THREE.Color(0xffffff), new THREE.Color(0xffffff));
-
-    sc = new Scene();
-    sc.add(sphere1);
-    sc.add(sphere2);
-    sc.add(sphere3);
-    sc.add(plane1);
-    sc.add(light1);
-    
-    var scr = new SceneRenderer("WebGLCanvas", 400, 400);
-    scr.init();
-    
-    var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
-    var rt      = new RayTracer(view, sc);
-    var gp = new GPGPU(scr, 400, 400, rt);
-    
-    var intersections = gp.getIntersections(getRayTextures(rt.view.getRays(), 1));
-    var colors        = gp.getColors({intersections: {type: 't', value: intersections},
-                                      bgColor: {type: 'c', value: new THREE.Color(0x000000)}});
-    //rt.renderUniform("renderCanvasUniform");
-    var arr = new Float32Array(400 * 400 * 4);
-    scr.scRenderer.readRenderTargetPixels(intersections,0,0,400,400,arr );
-    
-    
-    
-    //var imgD = rt.view.imagePlane.generateImage();
-    //var convD = convertData(imgD, 400, 400);
-    scr.setFrame(colors);
-    scr.render();
-    var buff = new Float32Array(400 * 400 * 4)
-    scr.scRenderer.readRenderTargetPixels(colors, 0, 0, 400, 400, buff);
-    
-    console.log("Hello");
+    $("#renderComparisonButton").click(function(){
         
-}
-
-function convertData(imageData, width, height){
-    var arr = new Float32Array(width * height * 4);
-    var count = 0;
-    for(var i = 0; i < height; ++i){
-        for(var k = 0; k < width; ++k){
-            arr[count + 0] = imageData[count + 0]/255;
-            arr[count + 1] = imageData[count + 1]/255;
-            arr[count + 2] = imageData[count + 2]/255;
-            arr[count + 3] = imageData[count + 3]/255;
-            count += 4;
-        }
-    }
-    var arrTexture = new THREE.DataTexture(arr, width, height, THREE.RGBAFormat, THREE.FloatType);
-    arrTexture.needsUpdate = true;
-    return arrTexture;
-}
-
-function genTexture(){
+        var bounceDepth = parseInt($("#bounceInput").val()) || 5;
+        var refractIndex = parseFloat($("#refractionInput").val()) || 0.95;
+        var reflectIndex = parseFloat($("#reflectionInput").val()) || 0.8;
+        sc.geometries[0].material.n = refractIndex;
+        sc.geometries[1].material.kr = reflectIndex;
+        
+        var time = 0;
+        var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
+        var rt      = new RayTracer(view, sc, bounceDepth);
+        var gp = new GPGPU(scr, 400, 400, rt);
+        var rayAsUniforms = getRayTextures(rt.view.getRays(), 1, gp, 400, 400);
+        
+        
+        var gpuTime, recursiveTime;
+        var start = new Date().getTime();
+        var gpuColors = gp.getIntersections(rayAsUniforms);
+        scr.setFrame(gpuColors);
+        scr.render();
+        var end = new Date().getTime();
+        gpuTime = end-start;
+        
+        start = new Date().getTime();
+        rt.renderUniform("renderCanvasUniform");
+        end = new Date().getTime();
+        recursiveTime = end-start;
+        $("#gpuTime").contents()[0].nodeValue  = gpuTime + "ms";
+        $("#recTime").contents()[0].nodeValue  = recursiveTime + "ms";
+    })
     
-    var arr = new Float32Array(400 * 400 * 4);
-    
-    var count = 0;
-    for(var i = 0; i < 400; ++i){
-        for(var k = 0; k < 400; ++k){
+    $("#renderAnimationButton").click(function(){
+        
+        if(interval != undefined || interval != null){
+            clearInterval(interval);
+            interval = null;
+            $("#renderAnimationButton").contents()[0].nodeValue  = "Start Animation";
+        } else {
             
-            arr[count + 0] = (k > 200) ? 1.0 : 0.5;
-            arr[count + 1] = 1.0;
-            arr[count + 2] = (i > 200) ? 1.0 : 0.5;
-            arr[count + 3] = 1.0;
+            var time = 0;
+            var view    = new View(new THREE.Vector3(0,0,3), new THREE.Vector3(0,0,-3).normalize(), new THREE.Vector3(0,1,0), 2, 400, 400);
+            var rt      = new RayTracer(view, sc, 20);
+            var gp = new GPGPU(scr, 400, 400, rt);
+            var rayAsUniforms = getRayTextures(rt.view.getRays(), 1, gp, 400, 400);
             
-            count += 4;
+            $("#renderAnimationButton").contents()[0].nodeValue  = "Stop Animation";
+            var test = function(){
+                
+                sc.geometries[0].origin.z = Math.sin(time * 0.25) * 2;
+                var gpuTime, recursiveTime;
+                var start = new Date().getTime();
+                var gpuColors = gp.getIntersections(rayAsUniforms);
+                scr.setFrame(gpuColors);
+                scr.render();
+                var end = new Date().getTime();
+                gpuTime = end-start;
+                time+=1;
+                $("#gpuTime").contents()[0].nodeValue  = gpuTime + "ms";
+            }
+            
+            interval=setInterval(test, 1000/12);
+            
         }
-    }
-    
-    
-    var arrTexture = new THREE.DataTexture(arr, 400, 400, THREE.RGBAFormat, THREE.FloatType);
-    arrTexture.needsUpdate = true;
-    return arrTexture;
-    
-}
+        
+        
+        
+        
+    })
+
+
+})

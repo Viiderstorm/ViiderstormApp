@@ -12,13 +12,37 @@
 <div class="ui divider"></div>
 
 <div class="ui stackable grid container" style="color: #EFEFEF">
+
     <div class="row">
-        <h1>Overview</h1>
-    </div>
-    
-    <div id="WebGLCanvas">
-        <canvas id="renderCanvasUniform" width=400px height=400px>
-        </canvas>
+        <div class="six wide column"> 
+            <div id="recTime" class="ui red horizontal label">0</div>
+            <div class="row">
+                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+        <div class="seven wide column">
+            <div id="gpuTime" class="ui red horizontal label">0</div>
+            <div id="WebGLCanvas" class="row" width="400px" height="400px">
+            </div>
+        </div>
+        <div class="three wide column">
+            <div class="row">
+                <div id="bounceInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Bounce Depth</div>
+                    <input id="bounceInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="refractionInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Index of Refraction</div>
+                    <input id="refractionInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="reflectionInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Reflection Coefficient</div>
+                    <input id="reflectionInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div style="margin-top: 30px;" class="ui button" id="renderComparisonButton">Render</div>
+                <div style="margin-top: 30px;" class="ui button" id="renderAnimationButton">Start Animation</div>
+            </div>
+        </div>
     </div>
 
 </div>

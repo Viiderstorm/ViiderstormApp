@@ -1,0 +1,131 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Checkpoint 7 </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Tone Reproduction - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Overview</h1>
+    </div>
+    <div class="row">
+        <div class="eleven wide column">
+            <p>In this section, we'll add some tone reproduction to the Ray Tracer</p>
+            <p>All we had to do was follow some simple algorithms during our ImageData creation stage and edit the values of the pixels</p>
+            <p>Feel free to test out some parameters below</p>
+        </div>
+        <div class="five wide column">
+            <img src="/images/TransmissionImage.PNG" width="300px" height="300px"></img>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <h1>Interactive Rendering</h1>
+    </div>
+    <div class="row">
+        <div class="four wide column"> 
+            
+        </div>
+        <div class="seven wide column">
+            <div class="row">
+                <canvas style="background:black" id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+        <div class="three wide column">
+            <div class="row">
+                <div id="compressionOptionDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Compression</div>
+                    <select id="compressionOptionInput" style="width:70px; color:black; float: right;">
+                        <option value="ward"> Ward </option>
+                        <option value="reinhard"> Reinhard </option>
+                    </select>
+                </div>
+                <div id="lmaxInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">L Max</div>
+                    <input id="lmaxInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="ldmaxInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">L<sub>d</sub> Max</div>
+                    <input id="ldmaxInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="samplePerPixelInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Samples Per Pixel</div>
+                    <input id="samplePerPixelInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div style="margin-top: 30px;" class="ui button" id="renderButtonUniform">Render</div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <h1>Renderings</h1>
+    </div>
+    <div class="row">
+        <h3> LMax = 10, L<sub>d</sub>Max = 500 | left: Ward, right: Rein</h3>
+    </div>
+    <div class="row">
+        <div class="eight wide column"> 
+            <img src="/images/ward1.PNG" width="400pxS" height="400px" ></img>
+        </div>
+        <div class="eight wide column">
+            <img src="/images/rein1.PNG" width="400px" height="400px" ></img>
+        </div>
+    </div>
+    
+    <div class="row">
+        <h3> LMax = 100, L<sub>d</sub>Max = 500 | left: Ward, right: Rein</h3>
+    </div>
+    <div class="row">
+        <div class="eight wide column"> 
+            <img src="/images/ward2.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="eight wide column">
+            <img src="/images/rein2.PNG" width="400px" height="400px" ></img>
+        </div>
+    </div>
+    
+    <div class="row">
+        <h3> LMax = 1000, L<sub>d</sub>Max = 500 | left: Ward, right: Rein</h3>
+    </div>
+    <div class="row">
+        <div class="eight wide column"> 
+            <img src="/images/ward3.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="eight wide column">
+            <img src="/images/rein3.PNG" width="400px" height="400px" ></img>
+        </div>
+    </div>
+    
+            
+</div>
+
+<div class="ui divider " ></div>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['/js/checkpoint7.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>

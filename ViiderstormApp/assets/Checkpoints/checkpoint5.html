@@ -1,0 +1,95 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Checkpoint 5 </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Reflection - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Overview</h1>
+    </div>
+    <div class="row">
+        <div class="eleven wide column">
+            <p>Now we're going to add recursive ray tracing and reflectivity to our scene.</p>
+            <p>This checkpoint is also very short and sweet. A few modifications I made from the previous checkpoint:</p>
+            <ul>
+                <li> Pull out the original ray tracing code into a recursive function </li>
+                <li> Add reflectivity to the ray tracing for loop </li>
+                <li> Add reflectivity to the scene objects </li>
+                <li> Change Sphere #2 and the Background colors to brighter, more interesting shades </li>
+                <li> Add more controls for interacting with the scene </li>   
+            </ul>
+            <p> And done.</p>
+        </div>
+        <div class="five wide column">
+            <img src="/images/ProcTexture.PNG" width="300px" height="300px"></img>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <h1>Rendering</h1>
+    </div>
+    <div class="row">
+        <h4> Reflective Sphere #2, bounce depth of 5, SPP of 1.</h4>
+    </div>
+    <div class="row">
+        <div class="six wide column"> 
+            <img src="/images/ReflectionImage.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="seven wide column">
+            <div class="row">
+                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+        <div class="three wide column">
+            <div class="row">
+                <div id="bounceInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Bounce Depth</div>
+                    <input id="bounceInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="sphereOneInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Sphere 1 Reflectivity</div>
+                    <input type="checkbox" id="sphereOneToggleInput" style="float:right" name="public">
+                </div>
+                <div id="sphereTwoInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Sphere 2 Reflectivity</div>
+                    <input type="checkbox" id="sphereTwoToggleInput" style="float:right" name="public">
+                </div>
+                <div id="samplePerPixelInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Samples Per Pixel</div>
+                    <input id="samplePerPixelInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div style="margin-top: 30px;" class="ui button" id="renderButtonUniform">Render</div>
+            </div>
+        </div>
+    </div>
+    
+            
+</div>
+
+<div class="ui divider " ></div>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['/js/checkpoint5.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>

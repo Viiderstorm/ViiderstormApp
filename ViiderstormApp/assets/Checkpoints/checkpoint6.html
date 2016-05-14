@@ -1,0 +1,90 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Checkpoint 6 </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Transmission - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Overview</h1>
+    </div>
+    <div class="row">
+        <div class="eleven wide column">
+            <p>Now we're going to add probably one of the most important pieces of ray tracing to our scene, transmission. In most simple terms, this is a simulation of light's behavior when it goes through objects.</p>
+            <p>This checkpoint, like the last few, are based around different applications of our intersection code so only a few steps are needed:</p>
+            <ul>
+                 <li> Add transmission reflection and index of refraction properties to the materials </li> 
+                 <li> Add transmission reflection code derived from Snell's Law into the illuminate function</li>
+                 <li> Change the color of Sphere 1 to that of Sphere 2 so the transmission is more visible </li>
+                 <li> And lastly, add all Phong Illumination terms to the materials to allow for each object to have different properties </li>
+            </ul>
+            <p> And done.</p>
+        </div>
+        <div class="five wide column">
+            <img src="/images/ReflectionImage.PNG" width="300px" height="300px"></img>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <h1>Rendering</h1>
+    </div>
+    <div class="row">
+        <h4> Transparent Sphere #1, bounce depth of 5, SPP of 1. Try it with a higher SPP!</h4>
+    </div>
+    <div class="row">
+        <div class="six wide column"> 
+            <img src="/images/TransmissionImage.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="seven wide column">
+            <div class="row">
+                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+        <div class="three wide column">
+            <div class="row">
+                <div id="bounceInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Bounce Depth</div>
+                    <input id="bounceInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="refractionInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Index of Refraction</div>
+                    <input id="refractionInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="samplePerPixelInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Samples Per Pixel</div>
+                    <input id="samplePerPixelInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div style="margin-top: 30px;" class="ui button" id="renderButtonUniform">Render</div>
+            </div>
+        </div>
+    </div>
+    
+            
+</div>
+
+<div class="ui divider " ></div>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['/js/checkpoint6.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>

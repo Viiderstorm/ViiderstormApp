@@ -1,0 +1,100 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Real Time Path Tracing </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Demo - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <div class="six wide column"> 
+            <div id="recTime" class="ui red horizontal label">0</div>
+            <div class="row">
+                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+        <div class="seven wide column">
+            <div id="gpuTime" class="ui red horizontal label">0</div>
+            <div id="WebGLCanvas" class="row" width="400px" height="400px">
+            </div>
+        </div>
+        <div class="three wide column">
+            <div class="row">
+                <div id="bounceInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Bounce Depth</div>
+                    <input id="bounceInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="refractionInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Index of Refraction</div>
+                    <input id="refractionInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="reflectionInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Reflection Coefficient</div>
+                    <input id="reflectionInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div style="margin-top: 30px;" class="ui button" id="renderComparisonButton">Render</div>
+                <div style="margin-top: 30px;" class="ui button" id="renderAnimationButton">Start Animation</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="ui divider " ></div>
+
+<script id="passThruShader" type="x-shader/x-vertex">
+
+        varying vec2 vUv;
+
+        void main()	{
+
+            vUv  = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+
+</script>
+
+<script id="imageShader" type="x-shader/x-fragment">
+        uniform sampler2D texture;
+        varying vec2 vUv;
+        
+        void main()	{
+            
+				gl_FragColor = texture2D(texture, vUv.xy);
+
+        }
+
+</script>
+
+<script id="objectIntersectionShader" type="x-shader/x-fragment">
+        uniform sampler2D origins;
+        uniform sampler2D directions;
+        varying vec2 vUv;
+        
+        void main(){
+        
+            
+        
+        }
+</script>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['/js/project.js', '/js/GPGPU.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>

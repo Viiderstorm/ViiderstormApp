@@ -1,0 +1,96 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Checkpoint 3 </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Basic Shading - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Overview</h1>
+    </div>
+    <div class="row">
+        <div class="eleven wide column">
+            <p>In this section, we're going to add some basic shading using the <a href="https://en.wikipedia.org/wiki/Phong_reflection_model" target="_blank">Phong Illumination Model</a>.</p>
+            <p>The idea here is to begin adding shadow effects, highlights, and gradients to our computer generated scenes to produce a more realistic looking image. The Phong Illumination Model manages this by solving 
+                a set of equations for each of the different forms of light in our scene: 
+            </p>
+            <ul>
+                <li>Ambient Light: The sum of light that comes into a point on a surface from all directions. </br>- It provides a basic underlying color for the object's surface and their shadows.</li>
+                <li>Diffuse Light: The light that comes in at a particular angle toward a point on a surface and reflects in many different directions. </br>- It provides a gradient nice effect given the angle of the light source from the surface normal.</li>
+                <li>Specular Light: The light that comes in at a particular angle toward a point and reflects in the opposite angle between the surface normal and view direction. </br>- It provides the shininess factor given the viewing angle.</li>
+            </ul>
+            <p>The link above provides a great image with all the parts of the equation rendered separately which I believe make it much easier to understand how the equation works.</p>
+            <h5>*I've taken the liberty of refactoring my code to be more object oriented and less testing oriented since the last checkpoint</h5>
+        </div>
+        <div class="five wide column">
+            <img src="/images/RayTracerRender.PNG" width="300px" height="300px"></img>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <h1>Rendering</h1>
+    </div>
+    <div class="row">
+        <h4>Basic Phong Shading - 1 Sample per Pixel, Center</h4>
+        <p></p>
+    </div>
+    <div class="row">
+        <div class="eight wide column"> 
+            <img src="/images/Checkpoint3-1SPP.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="eight wide column">
+            <div class="row">
+                <div class="ui button" id="renderButtonUniform">Click here to Render</div>
+                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="ui divider">
+    </div>
+    <div class="row">
+        <h4>Basic Phong Shading - 30 Samples per Pixel, Random Distribution</h4></br>
+    </div>
+    <div class="row">
+        <h5>Note: This section tends to render much quicker in Google Chrome than Firefox</h5>
+    </div>
+    <div class="row">
+        <div class="eight wide column">
+            <img src="/images/Checkpoint3-30SPP.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="eight wide column"> 
+            <div class="row">
+                <div class="ui button" id="renderButtonRandom" >Click here to Render</div>
+                <canvas id="renderCanvasRandom" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+    </div>
+    
+            
+</div>
+
+<div class="ui divider " ></div>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['/js/checkpoint3.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>

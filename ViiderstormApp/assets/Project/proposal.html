@@ -1,0 +1,161 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Project Proposal: Real-Time Path Tracing  </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> by Jason Curry</div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> CSCI-711 Global Illumination</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable center aligned grid container" style="color: #EFEFEF">
+    <div class="row">
+        <a href="https://graphics.stanford.edu/papers/metro/" target="_blank">
+                <img src="/images/path-tracing-stanford.jpg" 
+                    title="Bidirectional path tracing - SIGGRAPH 97"></img>
+        </a>
+        <p>Image of Bidirectional Path Tracing with 40 samples per pixel<p>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Description</h1>
+    </div>
+    <div class="row">
+        <div class="sixteen wide column">
+            
+            <p>Path tracing is a computer graphics algorithm that is designed to realistically simulate light bouncing and reflecting within a scene. There are many algorithms that exist within the global illumination space that obtain equally or more realistic images, many of those extremely realistic algorithms being too computationally intensive to work in real-time for dynamic scenes.</p>
+          
+            <div class="">
+                <p>	This project aims to learn more about the potential of real-time global illumination by implementing a real-time path tracer. The project will be implemented using web technologies and libraries such as WebGL through Three.js. However, it is possible that there may be unforeseen roadblocks with the initially chosen libraries, so there's potential to change the utilized libraries later in development. The scene is expected to be rendered in real time with moveable geometries such that the scene is dynamic and interactive. The initial scene will be a sphere with editable materials in a multi-colored room with a single light source. The intent is to display the power of path tracing by showcasing realistic casting of shadows and reflections in real-time as well as the draw backs of this global illumination technique.</p>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container">
+    <div class="row" style="color: #EFEFEF">
+        <h1>Project Obectives</h1>
+    </div>
+    <div class="row" style="color: #EFEFEF">
+        <ul>
+            <li>Create a User Interface that allows real-time interaction with the scene</li>
+            <li>Implement Bidirectional Path Tracing</li>
+            <li>Examine the various methods of noise reduction if time permits</li>
+        </ul>
+    </div>
+    <div class="row" style="color: #EFEFEF">
+        <h1>System and Software</h1>
+    </div>
+    <div class="row" style="color: #EFEFEF">
+    
+        <div class="ui four column stackable grid">
+            <div class="column">
+                Desktop Computer
+                <ul>
+                    <li>AMD FX-8350 (8-core CPU)</li>
+                    <li>AMD R9 290</li>
+                    <li>16GB DDR3 2400MHz RAM</li>
+                    <li>256GB SSD</li>
+                    <li>Windows 10</li>
+                </ul>
+            </div>
+            <div class="column">
+                Surface Pro 3
+                <ul>
+                    <li>Intel Core i5-4300U (dual-core CPU)</li>
+                    <li>Intel HD Graphics 4400 </li>
+                    <li>8GB DDR3 RAM</li>
+                    <li>256GB SSD</li>
+                    <li>Windows 10</li>
+                </ul>
+            </div>
+            <div class="column">
+                Software:
+                <ul>
+                    <li>Three.js / WebGL</li>
+                    <li>Visual Studio Code</li>
+                    <li>Google Chrome</li>
+                </ul>
+            </div>
+        </div>
+        
+
+    </div>
+    <div class="row" style="color: #EFEFEF">
+        <h1>Project Components</h1>
+            
+    </div>
+    <div class="row" style="color: #EFEFEF">
+    
+        <div class="sixteen wide column">
+            <div class="column">
+                <ul>
+                    <li>Rendering Canvas to display the path tracing algorithm in action</li>
+                    <li>Side Menu that enables users to dynamically change elements within the scene</li>
+                    <li>WebGL based Path Tracer</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+    
+    <div class="row" style="color: #EFEFEF">
+        <h1>Timeline</h1>
+    </div>
+    <div class="row" style="color: #EFEFEF">
+        <div class="sixteen wide column">
+            <ul>
+                <li>Skeleton Website: Basic Design, Basic UI, Simple Rendering Canvas</li>
+                <li>Setting up the scene(s)</li>
+                <li>Scene Manipulation for User Interaction</li>
+                <li>Path Tracing Implementation</li>
+                <li>Implement Temporal Noise Reduction - time permitting</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="row" style="color: #EFEFEF">
+        <h1>Final Presentation</h1>
+    </div>
+    <div class="row" style="color: #EFEFEF">
+        <div class="sixteen wide column">
+            I plan to demonstrate my work, discoveries, and difficulties during class. As my project is focused on real-time rendering, it only makes sense to demonstrate it in front of the class in real-time. 
+        </div>
+    </div>
+    
+    <div class="row" style="color: #EFEFEF">
+        <h1>Additional Resources</h1>
+    </div>
+    <div class="row" style="color: #EFEFEF">
+        <div class="sixteen wide column">
+            <ul>
+                <li><a target="_blank" href="http://www.hindawi.com/journals/ijcgt/2013/578269/">The Brigade Renderer</a></li>
+                <li><a href="https://graphics.stanford.edu/papers/metro/" target="_blank">Metropolis Light Transport</a></li>
+                <li><a href="http://cs.brown.edu/courses/cs224/papers/mc_pathtracing.pdf" target="_blank">Monte Carlo Path Tracing</a></li>
+            </ul>
+        </div>
+    </div>
+    
+</div>
+
+<div class="ui divider " ></div>
+
+<script>
+    
+     require(['main'], function(){
+        
+     })
+        
+    
+</script>

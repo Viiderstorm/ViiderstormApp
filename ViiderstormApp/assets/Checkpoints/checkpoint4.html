@@ -1,0 +1,88 @@
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Checkpoint 4 </div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Procedural Shading - Jason Curry</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+    <div class="row">
+        <h1>Overview</h1>
+    </div>
+    <div class="row">
+        <div class="eleven wide column">
+            <p>In this section, we're going to utilze a more advanced shading technique that allows us to procedurally create textures.</p>
+            <p>This checkpoint is very short and sweet. I've only made a few modifications from the previous checkpoint to be able to compute the colors on an intersection by intersection basis.</p>
+            <p> All I had to do was: </p>
+            <ul>
+                <li> Create some new Material objects for the Geometries to use instead of Three.js's supplied materials</li>
+                <li> Give these new Material objects a function that will return the correct color given a position and an object </li>
+                <li> Add those objects to the Scene Geometry classes </li>
+                <li> Change the references to Three.js's material color so that instead reference the new getColor method</li> 
+            </ul>
+            <p> And it's done.</p>
+            </p>Always refactor your code when you have a chance. It really pays off if you constantly have to maintain, update, and add features to the code base. </p>
+        </div>
+        <div class="five wide column">
+            <img src="/images/Checkpoint3-1SPP.PNG" width="300px" height="300px"></img>
+        </div>
+    </div>
+</div>
+
+<div class="ui divider " ></div>
+
+<div class="ui stackable grid container" style="color: #EFEFEF">
+
+    <div class="row">
+        <h1>Rendering</h1>
+    </div>
+    <div class="row">
+        <h4>Procedural Textured plane with 10 x 25 square pattern - 1 Sample per Pixel, Centered</h4>
+    </div>
+    <div class="row">
+        <div class="six wide column"> 
+            <img src="/images/ProcTexture.PNG" width="400px" height="400px" ></img>
+        </div>
+        <div class="eight wide column">
+            <div class="row">
+                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+            </div>
+        </div>
+        <div class="two wide column">
+            <div class="row">
+                <div id="widthInputDiv">
+                    <div class="ui red horizontal label">Width</div>
+                    <input id="widthInput" style="width:40px; color:black; float: right;"></input>
+                </div>
+                <div id="heightInputDiv" style="margin-top: 10px; margin-bottom: 10px">
+                    <div class="ui red horizontal label">Length</div>
+                    <input id="heightInput"style="width:40px; color:black; float: right"></input>
+                </div>
+                <div class="ui button" id="renderButtonUniform">Render</div>
+            </div>
+        </div>
+    </div>
+    
+            
+</div>
+
+<div class="ui divider " ></div>
+
+<script>
+    
+     require(['main'], function(){
+        require(['three'], function(THREE){
+            require(['/js/checkpoint4.js'], function(){
+                
+            })  
+        })
+     })
+        
+    
+</script>

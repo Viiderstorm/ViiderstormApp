@@ -1,13 +1,3 @@
-// Ray Tracer
-// --Ray
-// --Sphere
-// --Plane
-// --ImagePlane - always a 2x2 grid in world coords, size of pixels per square can change, numbers of ray samples per image pixel can change 
-// --Camera
-// --View (ImagePlane and Camera)
-// --Light
-// --Scene
-
 function RayTracer(view, scene, supersample){
     var self = this;
     self.view        = view;

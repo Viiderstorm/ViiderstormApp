@@ -1,10 +1,19 @@
+
+/*
+* int iwidth - width of imageplane
+* int iheight - height of imageplane
+* THREE.Vector3 location - origin point of the ImageFrame
+*/
 function ImageFrame(iwidth, iheight, location) {
+    
+    /* Instance Variables */
     var self = this;
     self.imageWidth = iwidth;
     self.imageHeight = iheight;
 
     self.planeWidth = 2;
     self.planeHeight = 2;
+    self.location = location; //three vector3
 
     self.pixels = (function () {
         var tmp = [];
@@ -20,6 +29,9 @@ function ImageFrame(iwidth, iheight, location) {
     self.pixelWidth = self.planeWidth / self.imageWidth;
     self.pixelHeight = self.planeHeight / self.imageHeight;
 
+    /* generateImageData
+    * Description: Converts ray data into pixel data that the HTML canvas element can understand
+    */
     self.generateImageData = function () {
         var tmp = [];
         for (var i = 0; i < self.imageHeight; i++) {
@@ -38,6 +50,11 @@ function ImageFrame(iwidth, iheight, location) {
         return new Uint8ClampedArray(tmp);
     }
 
+    /* displayImage
+    * Description: Takes HTML Canvas Image Data and places it in the canvas element
+    *
+    * sstring canvasId - HTML ID of the canvas to draw the image onto.
+    */
     self.displayImage = function (canvasId) {
 
         var c = document.getElementById(canvasId);
@@ -48,10 +65,14 @@ function ImageFrame(iwidth, iheight, location) {
 
     }
 
-    self.location = location; //three vector3
 }
 
 
+/* Class RayTracer
+* THREE.Camera camera - THREE js camera object
+* ImagePlane   frame  - ImagePlane used to capture the Ray Traced Image
+* THREE.Scene  scene  - Scene to use the Ray Tracer on  
+*/
 function RayTracer(camera, frame, scene) {
     var self = this;
 
@@ -101,6 +122,10 @@ function RayTracer(camera, frame, scene) {
 
 }
 
+/* Class Ray
+* THREE.Vector3 origin    - origin of the ray
+* THREE.Vector3 direction - direction of the ray
+*/
 function Ray(origin, direction) {
     var self = this;
 
@@ -108,6 +133,12 @@ function Ray(origin, direction) {
     self.direction = direction;
 }
 
+/* Function generateRays
+* Description: Takes a Camera and an ImagePlane and calculates all the ray origins and direction for each pixel of the ImagePlane
+*
+* THREE.Camera camera     - Camera to use for the ray tracer
+* ImagePlane   frame      - ImagePlane that will capture the ray traced image
+*/
 function generateRays(camera, frame) {
     
     //assume camera is centered behind frame, looking through the center of frame
@@ -138,7 +169,11 @@ function generateRays(camera, frame) {
 
 }
 
-
+/* Function findIntersections
+* Description: Finds the intersection points given a ray and a list of THREE.Geometry
+* Ray ray - ray to find intersections for
+* Geometry[] geometries - geometries to check against
+*/
 function findIntersection(ray, geometries) {
 
     var intersections = [];
@@ -180,6 +215,11 @@ function findIntersection(ray, geometries) {
 
 }
 
+/* Function getSphereIntersection
+* Decription: Calculates intersection with sphere, returns null if no intersection is found.
+* Ray ray - ray to find an intersection with
+* THREE.Sphere - sphere to check for intersection against
+*/
 function getSphereIntersection(ray, sphere) {
 
     var dx = ray.direction.x;
@@ -216,7 +256,7 @@ function getSphereIntersection(ray, sphere) {
 
 //I CANNOT UNDERSTAND THIS EQUATION. IT DOESN'T WORK.
 //IT'S MADE ME QUESTION MY LIFE MAINLY BECAUSE THE "F" VARIABLE
-//MADE NO SENSE TO ME.
+//MADE NO SENSE TO ME. THIS IS WHY ALL THE TESTING CODE WAS WRITTEN
 function getPlaneIntersection(ray, plane) {
 
     var pointOnPlace = ray.origin.clone().sub(plane.geometry.vertices[0]);
@@ -373,6 +413,10 @@ $("#renderImage1Button").click(function(event){
 })
 
 
+
+//////////////////////////////////////////////////
+////     HERE BE TESTING CODE FOR MY SANITY
+/////////////////////////////////////////////////
 
 /* TEST POINT IN TRIANGLE */
 function testPointInTriangle() {

@@ -14,10 +14,19 @@
 <div class="ui stackable grid container" style="color: #EFEFEF">
 
     <div class="row">
+        <div class="eight wide column">
+            Recursive Javascript Ray Tracer
+        </div>
+        <div class="eight wide column">
+            Iterative shader/gpu based Ray Tracer
+        </div>
+        
+    </div>
+    <div class="row">
         <div class="six wide column"> 
             <div id="recTime" class="ui red horizontal label">0</div>
             <div class="row">
-                <canvas id="renderCanvasUniform" width="400px" height="400px"></canvas>
+                <canvas id="renderCanvasUniform" width="400px" height="400px" style="background: black"></canvas>
             </div>
         </div>
         <div class="seven wide column">
@@ -39,11 +48,18 @@
                     <div class="ui red horizontal label">Reflection Coefficient</div>
                     <input id="reflectionInput" style="width:40px; color:black; float: right;"></input>
                 </div>
-                <div style="margin-top: 30px;" class="ui button" id="renderComparisonButton">Render</div>
-                <div style="margin-top: 30px;" class="ui button" id="renderAnimationButton">Start Animation</div>
+                <div style="margin-top: 30px;" class="ui button" id="renderComparisonButton" title="Click this to save and render the chosen values">Render</div>
+                <div style="margin-top: 30px;" class="ui button" id="renderAnimationButton" title="Click this to begin and end the animation">Start Animation</div>
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="ui yellow horizontal label" style="color: black !important">
+            Running the animation for too long may cause WebGL to crash and may require the browser to be restarted. I apologize for this issue, I couldn't figure out how to resolve it.
+        </div>
+        
+    </div>
+
 
 </div>
 

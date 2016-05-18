@@ -35,7 +35,6 @@
     <!--STYLES END-->
     
     <link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,300|Gruppo|Poiret+One|Exo+2:400,200|Alegreya+Sans:400,300' rel='stylesheet' type='text/css'>
-    
     <script data-main="../js/dependencies/main" src="../js/dependencies/require.js"></script>
   </head>
 
@@ -74,38 +73,30 @@
         </div>
         <div  class="ui stackable grid container">
         
-            <div class="sixteen wide column" data-bind='component: "checkpoint1"'>
-                <!-- BEGIN -->
-<div class="ui grid">
+            <div class="sixteen wide column">
+                <div class="ui grid">
     <div class="row">
         <div class="column">
             <div class="ui huge message grid container centered aligned" style="background:#6f6f6f;box-shadow:0px 0px 0px 0px;"> 
-                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Checkpoint 2 </div>
-                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Raytracing Framework - Jason Curry</div>
+                <div class="ui huge header" style="color:#EFEFEF; font-family:'Gruppo';"> Advanced Checkpoint 2</div>
+                <div class="ui subheader row" style="color:#EFEFEF; font-family:'Gruppo';"> Renderman Shaders - Jason Curry</div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="ui divider " ></div>
+<!-- BEGIN -->
+
+<div class="ui divider"></div>
 
 <div class="ui stackable grid container" style="color: #EFEFEF">
     <div class="row">
         <h1>Overview</h1>
     </div>
     <div class="row">
-    
-        <div class="twelve wide column">
-            <p>This checkpoint marks the beginnings of the Ray Tracer. It sets the ground work for a basic Ray Tracer so that we can build on top of it and implement new features without having to refactor our code too much. It covers:</p>
-            <ul>
-                <li>Creating an Image Plane</li>
-                <li>Creating Rays for each Pixel in the Image Plane relative to a camera</li>
-                <li>Computing ray-intersections for various geometries</li>
-                <li>Compiling the rays' colors into an image</li>
-            </ul>
-            <p>The image we're rendering is our initial scene from checkpoint one. The colors are expected to appear flat since the ray tracer is using the object's material color as the computed color for the ray intersection. Soon we'll add highlights, reflections, and shadows to generate a more realistic image.</p>
+        <div class="eleven wide column">
+            <p>Here I've placed images that come from my experimentation with Renderman shaders.</p>
         </div>
-    
     </div>
 </div>
 
@@ -113,47 +104,36 @@
 
 <div class="ui stackable grid container" style="color: #EFEFEF">
 
-    <div class="row" style="color: #EFEFEF">
-        <h1>Rendering</h1>
+    <div class="row">
+        <h1>Renderings</h1>
+    </div>
+    <div class="row">
+        <h3> Rendering of the supplied shaders from class, slightly modified </h3>
+    </div>
+    <div class="row">
+        <div class="eight wide column"> 
+            <img src="../images/rsl1.PNG" width="400px" height="400px"></img>
+        </div>
     </div>
     
     <div class="row">
-        <div>
-            <p>Left: An image of the Basic Ray Tracer framework rendering our initial scene.</p>
-        </div>
-        <div>
-            <p>Right: Ray Tracing Render Interaction. I've added this in case anyone was curious about how long it takes to render in the web page. </p>
-        </div>
+        <h3> Rendering of some custom shaders</h3>
     </div>
     
     <div class="row">
-        <div class="eight wide column">
-            <img src="../images/RayTracerRender.PNG"></img>
-        </div>
-        <div class="eight wide column">
-            <div class="row">
-                <div id="renderImage1Button" class="ui button">Click to Render</div>
-                <canvas id="renderCanvas" width="400px" height="400px"></canvas>
-            </div>
+        <p><a href="https://github.com/sbanjara/OrangeShader/tree/master/SourceCode">Source for the Orange Shader</a></p>
+    </div>
+    <div class="row">
+        <div class="eight wide column"> 
+            <img src="../images/rsl2.PNG" width="400px" height="400px" ></img>
         </div>
     </div>
+    
+    
             
 </div>
 
 <div class="ui divider " ></div>
-
-<script>
-    
-     require(['main'], function(){
-        require(['three'], function(THREE){
-            require(['../js/checkpoint2.js'], function(){
-                
-            })  
-        })
-     })
-        
-    
-</script>
 
 <!-- END -->
             </div>
@@ -219,8 +199,5 @@
         </div>
     </div>
     
-    
   </body>
 </html>
-
-

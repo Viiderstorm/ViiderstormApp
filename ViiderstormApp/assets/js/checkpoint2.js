@@ -254,9 +254,9 @@ function getSphereIntersection(ray, sphere) {
 }
 
 
-//I CANNOT UNDERSTAND THIS EQUATION. IT DOESN'T WORK.
-//IT'S MADE ME QUESTION MY LIFE MAINLY BECAUSE THE "F" VARIABLE
-//MADE NO SENSE TO ME. THIS IS WHY ALL THE TESTING CODE WAS WRITTEN
+/*
+* Equation for plane intersection from class. Very confusing, didn't end up using it in the end.
+*/
 function getPlaneIntersection(ray, plane) {
 
     var pointOnPlace = ray.origin.clone().sub(plane.geometry.vertices[0]);
@@ -275,8 +275,11 @@ function getPlaneIntersection(ray, plane) {
 }
 
 
-//THIS EQUATION MADE WAY MORE SENSE, SEEMS WAY MORE PRACTICAL, AND 
-//WORKS WITHOUT THE USE OF "F".
+/*
+* Equation for plane intersection I found on the web. Made more sense to me and worked very well.
+* Ray ray - intersecting ray
+* Three.Mesh plane - plane to find intersection with 
+*/
 function getPlaneIntersectionNotSchool(ray, plane){
     
     var pointOnPlane = plane.geometry.vertices[0];
@@ -294,6 +297,11 @@ function getPlaneIntersectionNotSchool(ray, plane){
     
 }
 
+/*
+* Description: Checks that the intersection point lies within one of the faces of the plane
+* THREE.Vector3 point - Intersection point
+* THREE.Mesh polygon - plane to intersect with
+*/
 function validatePointIsInPolygonPlane(point, polygon) {
 
     var successfulFaceTests = 0;
@@ -312,6 +320,13 @@ function validatePointIsInPolygonPlane(point, polygon) {
 
 }
 
+
+/*
+* Description: Checks that the intersection point lies within a face
+* THREE.Vector3 point - Intersection point
+* THREE.Vector3[] vertices- vertices of the plane
+* THREE.Face     face - Face object that denotes the sequence of vertices that make up the plane
+*/
 function checkPointInTriangle(point, vertices, face) {
 
     var linesToVertices = []
@@ -344,6 +359,9 @@ function checkPointInTriangle(point, vertices, face) {
 
 }
 
+/*
+* Gets the normal given a list of vertices 
+*/
 function getNormal(vertices) {
     var v1 = vertices[0];
     var v2 = vertices[1];

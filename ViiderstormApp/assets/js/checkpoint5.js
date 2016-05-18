@@ -1,13 +1,10 @@
-// Ray Tracer
-// --Ray
-// --Sphere
-// --Plane
-// --ImagePlane - always a 2x2 grid in world coords, size of pixels per square can change, numbers of ray samples per image pixel can change 
-// --Camera
-// --View (ImagePlane and Camera)
-// --Light
-// --Scene
-
+/* Class RayTracer
+* Description: Object that is used for managing and tracing rays as well as converting data to images
+* View view - The View used to view the scene with
+* Scene scene - The scene to view
+* Integer bounces - max number of ray bounces
+* Integer supersample - The number of samples per pixel
+*/
 function RayTracer(view, scene, bounces, supersample){
     var self = this;
     self.view        = view;
@@ -15,16 +12,30 @@ function RayTracer(view, scene, bounces, supersample){
     self.rays        = null;
     self.bounces     = bounces;
     
+    /*
+    * Initializes the Ray Tracer with a set number of Random samples then renders the scene
+    * String canvasId - The DOMElement ID for the rendering canvas
+    * Integer supersample - The number of samples per pixel
+    */
     self.renderRandom = function(canvasId, supersample){
         self.rays = self.view.getRaysRandom(supersample);
         self.render(canvasId);
     }
     
+    /*
+    *Initializes the Ray Tracer with a uniform sampling (1 SPP) and then renders the scene
+    * String canvasId - The DOMElement ID for the rendering canvas
+    */
     self.renderUniform = function(canvasId){
         self.rays = self.view.getRays();
         self.render(canvasId);
     }
     
+    /*
+    * Recursively bounces the rays and calculates color
+    * Ray ray - inital ray object to trace
+    * Integer depth - the max depth of the ray
+    */
     self.illuminate    = function(ray, depth){
         var color;
         var intersection = self.scene.getIntersection(ray);
@@ -62,6 +73,10 @@ function RayTracer(view, scene, bounces, supersample){
         return color;
     }
     
+     /*
+    *Renders the scene by tracing each pixel's ray
+    * String canvasID - The DOMElement ID for the rendering canvas
+    */ 
     self.render      = function(canvasId){
         for(var i = 0; i < self.rays.length; i++){
             for(var k = 0; k < self.rays[i].length; k++){
@@ -83,6 +98,10 @@ function RayTracer(view, scene, bounces, supersample){
         self.displayImage(canvasId)
     } 
     
+     /*
+    * Averages a list of color samples
+    * Color[] colorSamples - A List of Color Samples
+    */
     self.averageColor = function(colorSamples){
         var colors = new THREE.Color(0x000000);
         for(var i = 0; i < colorSamples.length; i++){
@@ -91,6 +110,10 @@ function RayTracer(view, scene, bounces, supersample){
         return colors;
     }
     
+    /*
+    * Puts the render data into the canvas
+    * String canvasId - The DOMElement ID for the rendering canvas
+    */
     self.displayImage = function(canvasId){
         var renderImgData = self.view.imagePlane.generateImage();
         var c = document.getElementById(canvasId);
@@ -101,12 +124,21 @@ function RayTracer(view, scene, bounces, supersample){
     }
 }
 
+/* Class Ray
+* THREE.Vector3 origin - origin of the ray
+* THREE.Vector3 direction - direction of the ray
+*/
 function Ray(origin, direction){
     var self = this;
     self.origin    = origin.clone();
     self.direction = direction.clone();
 }
 
+/* Class Camera
+* THREE.Vector3 origin - origin of the camera
+* THREE.Vector3 lookAt - point to look at
+* THREE.Vector3 up     - Up direction in relation to the scene
+*/
 function Camera(origin, lookAt, up){
     var self = this;
     self.origin = origin.clone();
@@ -114,6 +146,13 @@ function Camera(origin, lookAt, up){
     self.up     = up.clone();
 }
 
+/* Class ImagePlane
+* THREE.Vector3 origin - origin of the Image Plane
+* THREE.Vector3 lookAt - point to look at
+* THREE.Vector3 up     - Up direction in relation to the scene
+* Integer displayImageHeight - height of the image plane
+* Integer displayImageWidth  - width of the image plane
+*/ 
 function ImagePlane(origin, lookAt, up, displayImageHeight, displayImageWidth){
     var self = this;
     self.origin             = origin.clone();
@@ -143,6 +182,10 @@ function ImagePlane(origin, lookAt, up, displayImageHeight, displayImageWidth){
         }
         return pix;
     })( self.topLeftPixel.x, self.topLeftPixel.y, self.topLeftPixel.z );
+    
+    /*
+    * Take the rendering data in the Image Plane and turn it into a format that the canvas can read
+    */
     self.generateImage      = function(){
         var tmp             = [];
         for (var i = 0; i < self.displayImageHeight; i++) {
@@ -162,10 +205,23 @@ function ImagePlane(origin, lookAt, up, displayImageHeight, displayImageWidth){
     
 }
 
+/* Class View
+* A combination of the camera and image plane that makes it's manueverability much easier.
+* THREE.Vector3 origin - origin of the image plane
+* THREE.Vector3 lookAt - the point to look at
+* THREE.Vector3 up     - The up direction in relation to the camera's view
+* Integer displayImageHeight - height of the image plane
+* Integer displayImageWidth  - width of the image plane
+*/
 function View(origin, lookAt, up, cameraDistance, displayImageHeight, displayImageWidth){
     var self = this;
     self.imagePlane    = new ImagePlane(origin, lookAt, up, displayImageHeight, displayImageWidth);
     self.camera        = new Camera(self.imagePlane.origin.clone().add(self.imagePlane.lookAt.clone().negate().multiplyScalar(cameraDistance)),self.imagePlane.origin, up);
+    
+    /*
+    * Creates the set of ray for the set of pixels
+    * Function sampleFun - function to modify the generation of the rays. If undefined, it defaults to uniform sampling.
+    */
     self.getRays       = function(sampleFunc){
         var rays       = [];
         for(var i = 0; i < self.imagePlane.pixels.length; i++){
@@ -186,6 +242,11 @@ function View(origin, lookAt, up, cameraDistance, displayImageHeight, displayIma
         }
         return rays;
     }
+    
+    /*
+    * Modifier function for generating random ray direction given the View information. Picks a random direction in the image plane for each pixel, potentially multiple times depending on the sampleNumber.
+    * Integer sampleNumber - number of samples to take per pixel
+    */
     self.getRaysRandom = function(sampleNumber){
         return self.getRays(function(pixelOrigin, rightVector, downVector, cameraOrigin){
             var rays          = []
@@ -207,7 +268,14 @@ function View(origin, lookAt, up, cameraDistance, displayImageHeight, displayIma
 
 
 ///BEGIN SCENE OBJECTS
-
+/* Class Sphere
+* Description: Sphere object data structure. Built on top of the existing THREE.js gemoetry objects.
+* THREE.Vector3 origin - origin of the sphere
+* Integer radius - radius of the sphere
+* Integer widthSegments - number of segments going across (left-right) when creating the vertices
+* Integer heightSegments - number of segments going across (top-down) when creating the vertices
+* THREE.Material material - THREE.js material object that defines the properties of the sphere
+*/
 function Sphere(origin, radius, widthSegments, heightSegments, material){
     var self = this;
     self.origin    = origin;
@@ -226,6 +294,11 @@ function Sphere(origin, radius, widthSegments, heightSegments, material){
         self.vertices = self.mesh.geometry.vertices;
         self.faces = self.mesh.geometry.faces;
     }
+    
+    /*
+    * Calculates intersection with the sphere given a ray. Returns null if no intersection is found.
+    * Ray ray - ray to check intersection for
+    */
     self.getIntersect   = function(ray){
         var dx = ray.direction.x;
         var dy = ray.direction.y;
@@ -266,6 +339,14 @@ function Sphere(origin, radius, widthSegments, heightSegments, material){
     
 }
 
+/* Class Plane
+* Description: Data strucutre for the Plane
+* THREE.Vector3 origin - origin of the plane
+* THREE.Vector3 normal - normal of the plane
+* Integer width - width of the plane
+* Integer height - height of the plane
+* THREE.Material material - THREE.js material object that defines the properties of the plane
+*/
 function Plane(origin, normal, width, height, material){
     var self = this;
     self.origin       = origin;
@@ -294,6 +375,11 @@ function Plane(origin, normal, width, height, material){
         self.vertices = self.mesh.geometry.vertices;
         self.faces    = self.mesh.geometry.faces;
     }
+    
+    /*
+    * Intersection calculation for plane
+    * Ray ray - ray to check intersection with
+    */
     self.getIntersect = function(ray){
         var intersect = self.getIntersectPlane(ray);
         if(intersect != null && self.isPointInPlaneGeometry(intersect)){
@@ -305,6 +391,11 @@ function Plane(origin, normal, width, height, material){
         }
         return null;
     }
+    
+    /*
+    * Helper function for ray intersection
+    * Ray ray - ray to check intersection with
+    */
     self.getIntersectPlane = function(ray){
         var point = self.vertices[0]
         var rayToPoint  = ray.origin.clone().sub(point);
@@ -317,6 +408,11 @@ function Plane(origin, normal, width, height, material){
         }
         return null;
     }
+    
+    /*
+    * Checks if the intersection point is within the plane geometry
+    * THREE.Vector3 point - intersection point
+    */ 
     self.isPointInPlaneGeometry = function(point){
         for(var i = 0; i < self.faces.length; ++i){
             var verts = [ self.vertices[self.faces[i].a],
@@ -330,6 +426,13 @@ function Plane(origin, normal, width, height, material){
     }
 }
 
+
+/* Class Light
+* Description: Simple light data structure
+* THREE.Vector3 origin - origin of the light
+* THREE.Color intensity - intensity of the light
+* THREE.Color color - color of the light
+*/
 function Light(origin, intensity, color){
     var self = this;
     self.intensity             = intensity;
@@ -341,15 +444,32 @@ function Light(origin, intensity, color){
 
 ///BEGIN MATERIAL OBJECTS
 
+
+/* Class BasicMaterial
+* Description: Simple material data structure that replaces the one that THREE.js has
+* THREE.Color color - color of the material
+*/
 function BasicMaterial(color){
     var self = this;
     self.reflection = 0.0;
     self.color    = new THREE.Color(color);
+    
+    /* Accessor method
+    * Returns the color of the material
+    * var intersection - The intersection object
+    */
     self.getColor = function(intersection){
         return self.color;
     }
 }
 
+/* Class CheckerMaterial
+* Description: Material data structure that creates a checkered pattern on the surface of an object
+* THREE.Color color1 - first color
+* THREE.Color color2 - second color
+* Integer widthInChecks - width of the checkerboard in number of squares
+* Integer heightInChecks - height of the checkboard in number of squares
+*/
 function CheckerMaterial(color1, color2, widthInChecks, heightInChecks){
     var self = this;
     self.reflection = 0.0;
@@ -357,6 +477,12 @@ function CheckerMaterial(color1, color2, widthInChecks, heightInChecks){
     self.color2            = new THREE.Color(color2);
     self.wChecks           = widthInChecks;
     self.hChecks           = heightInChecks;
+    
+     /*
+    * Accessor method
+    * Returns the color of the material given the intersection object
+    * var intersection - The intersection object
+    */
     self.getColor          = function (intersection){
         switch(intersection.geometry.constructor.name){
             case "Sphere":
@@ -367,6 +493,11 @@ function CheckerMaterial(color1, color2, widthInChecks, heightInChecks){
                 throw new Error("Material not defined for Scene Object: " + intersection.geometry.constructor.name); 
         }
     }
+    
+    /*
+    * Calculates what color should be at a given intersection on a plane.
+    * var intersection = The intersection object
+    */
     self.getPlaneColor = function(intersection){
         var backCorner      = intersection.geometry.vertices[0].clone();
         var widthVector     = intersection.geometry.vertices[1].clone().sub(backCorner).normalize();
@@ -385,6 +516,10 @@ function CheckerMaterial(color1, color2, widthInChecks, heightInChecks){
         return self.color2;
     }
     
+    /*
+    * Calculates what color should be at the given intersection on a sphere
+    * var intersection = The intersection object
+    */
     self.getSphereColor = function(intersection){
         return self.color1; 
     }  
@@ -393,12 +528,19 @@ function CheckerMaterial(color1, color2, widthInChecks, heightInChecks){
 //END MATERIAL OBJECTS
 
 ///BEGIN SCENE
-
+/* Class Scene
+* Description: Object that maintains the scene and tracing of the rays
+*/
 function Scene(){
     var self = this;
     self.geometries      = []
     self.lights          = []
     self.backgroundColor = new THREE.Color(0x4392FC)
+    
+     /* 
+    * Adds an object to the scene
+    * var object - object to add to the scene. Must be of type Light, Sphere, or Plane
+    */
     self.add             = function(object){
         if(object instanceof Light){
             self.lights.push(object);
@@ -407,9 +549,11 @@ function Scene(){
             self.geometries.push(object);
         }
     }
-    self.rotate           = function(rMatrix){
-        
-    }
+    
+    /*
+    * Finds all intersections for a ray in the scene then picks the closest one
+    * Ray ray - ray to find intersection points for
+    */
     self.getIntersections = function(ray){
         var intersections = [];
         for(var i = 0 ; i < self.geometries.length; ++i){
@@ -430,11 +574,19 @@ function Scene(){
         return intersections;
     }
     
+    /*
+    * Finds a single intersection in the scene for a given ray
+    * Ray ray - ray to find intersection point for
+    */
     self.getIntersection = function(ray){
         var intersection = self.getIntersections(ray)[0];
         return intersection == undefined ? null : intersection;
     }
     
+     /*
+    * Finds the shadow ray intersection points for a shadow ray originating from a point
+    * THREE.Vector3 point - intersection point or shadow ray origin point
+    */
     self.getShadowIntersectionsFromPoint = function(point){
         var intersections = [];
         for(var i = 0; i < self.lights.length; i++){
@@ -450,6 +602,11 @@ function Scene(){
         return intersections;
     }
     
+    /*
+    * Calculates the ambient light term of an intersection point within the scene
+    * THREE.Vector3 rayIntersection - intersection object
+    * Float constant - Ambient term constant
+    */
     self.getAmbientLight = function(rayIntersection, constant){
         var comp         = 1/self.lights.length;
         var ambientColor = new THREE.Color(0x000000); 
@@ -459,6 +616,12 @@ function Scene(){
         
         return ambientColor.multiply(rayIntersection.geometry.material.getColor(rayIntersection)).multiplyScalar(constant)
     }
+    
+    /*
+    * Calculates the diffuse light term of an intersection point within the scene
+    * THREE.Vector3 rayIntersection - intersection object
+    * Float constant - diffuse term constant
+    */
     self.getDiffuseLight  = function(rayIntersection, constant){
         var diffuseLight = new THREE.Color(0x000000);
         for(var i = 0; i < self.lights.length; ++i){
@@ -471,6 +634,12 @@ function Scene(){
         }
         return diffuseLight.multiplyScalar(constant);
     }
+    
+    /*
+    * Calculates the specular light term of an intersection point within the scene
+    * THREE.Vector3 rayIntersection - intersection object
+    * Float constant - specular term constant
+    */
     self.getSpecularLight = function(rayIntersection, ray, constant){
         var specularLight = new THREE.Color(0x000000);
         for(var i = 0; i < self.lights.length; i++){
@@ -497,7 +666,11 @@ function Scene(){
 
 /// BEGIN UTIL
 
-
+/*
+* Description: Checks that the intersection point lies within a face
+* THREE.Vector3 point - Intersection point
+* THREE.Vector3[] vertices- vertices of the plane's faces
+*/
 function checkPointIsInTriangle(point, vertices){
     var linestoVertices = []
     for(var i = 0; i < vertices.length; i++){
@@ -517,6 +690,9 @@ function checkPointIsInTriangle(point, vertices){
     return false;
 }
 
+/*
+* Description: Checks whether an array is full of null values
+*/
 function arrayIsNull(arr){
     var count = 0;
     for(var i = 0 ; i < arr.length; i++){
@@ -527,6 +703,11 @@ function arrayIsNull(arr){
     return count == arr.length ? true : false;
 }
 
+/*
+* Description: Calculates the relfection direction of a point and direction
+* THREE.Vector3 rayIntersection - intersection object
+* THREE.Vector3 light - light object
+*/
 function getReflection(rayIntersection, light){
     var pointToLight = light.origin.clone().sub(rayIntersection.point).normalize();
     var dotProd  = pointToLight.clone().dot(rayIntersection.normal.normalize()) * 2;

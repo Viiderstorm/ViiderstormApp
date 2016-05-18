@@ -1,8 +1,10 @@
-//TODO:
-// -add change listener to number of scene elements and recompile shaders if it changes
-// -add change listener to scene object origins so objects can be moved around without recompiation
-
-
+/* Class: GPGPU
+* Description: Object that enables General Processing using WebGL 
+* SceneRenderer SCR - the SceneRender for the canvas (having multiple WebGL renderers causes problems)
+* integer width - width of the rendering canvas
+* integer height - height of the rendering canvas
+* RayTracer rt   - Ray Tracer object to do general processing for
+*/
 function GPGPU(SCR, width, height, rt){
     var self = this;
     
@@ -34,17 +36,29 @@ function GPGPU(SCR, width, height, rt){
     }
     
     //class functions
+    
+    /*
+    * Calculates color and intersections
+    */
     self.getIntersections = function(rayData){
         self.updateUniforms(self.intersectionShader, rayData );
         var intersections = self.compute(self.intersectionShader); // vec4(x,y,z, objectIndex)
         return intersections;
     }
+    
+    /*
+    * Takes two textures and blends them together
+    */
     self.getSummation = function(data){
         self.updateUniforms(self.summationShader, data);
         var finalColor = self.compute(self.summationShader); // vec4(x,y,z, objectIndex)
         return finalColor;
     }
     
+    /*
+    * Sets up the renderer to render using whatever "compute" shader we're using and pass back the results
+    * THREE.ShaderMaterial shaderMat - "computer" shader
+    */
     self.compute          = function(shaderMat){
         self.gpScene.children[0].material = shaderMat;
         var output = new THREE.WebGLRenderTarget(width, height, {
@@ -57,10 +71,20 @@ function GPGPU(SCR, width, height, rt){
         return output;
     }
     
+    /*
+    * Updates the uniform variables in a specified shader
+    * var shader - shader object
+    * dict uniforms - dictionary of uniform values
+    */
     self.updateUniforms        = function(shader, uniforms){
         shader.uniforms = $.extend(shader.uniforms, uniforms);
     }
     
+    /*
+    * Gets the shader for the intersection/color calculating shader
+    * Scene scene - scene to ray trace
+    * RayTracer rt - Ray Tracer object to use for computation
+    */
     self.getIntersectionShader = function(scene, rt){
         var sceneElems = scene.geometries;
         var shader = "precision highp float;\nuniform sampler2D origins;\nuniform sampler2D directions;\nvarying vec2 vUv;\n";
@@ -87,6 +111,9 @@ function GPGPU(SCR, width, height, rt){
         });
     }
     
+    /*
+    * Get the shader for blending the colors together
+    */
     self.getSummationShader = function(){
         var shader = "precision highp float; uniform sampler2D oldColors; uniform sampler2D newColors; uniform float weight; varying vec2 vUv;\n" +
                      "void main(){ gl_FragColor = vec4(mix(texture2D(newColors, vUv.xy).xyz,texture2D(oldColors, vUv.xy).xyz, weight), 1.0);\n}"
@@ -162,9 +189,10 @@ function getShaderObjectUniforms(scene){
     return tmp;
 }
 
-/*
-    Gets everything regarding the structs for the scene
-*/
+///////////////////////////////////////////////////////////////////////////
+//////////
+////////// EVERYTHING BELOW IS ESSENTIALLY SHADER STRING CONCATENATION CODE
+///////////////////////////////////////////////////////////////////////////
 function getShaderObjectStructs(scene){
     
     //helper function                
@@ -589,7 +617,16 @@ function getShaderRandom(){
 
 }
 
-
+/*
+* Creates the intial data to begin the computation. There is a render call in here to convert data
+* to the correct format as the intial THREE.DataTexture is flipped when transfered to OpenGL. Baically,
+* this is a weird work around for their horrible implementation.
+* Ray[][] rays - Huge array of ray objects
+* Integer sampelsize - Number of samples per pixel
+* GPGPU gpgpu - the gpgpu class to do the conversion
+* Integer width - width of the render canvas in pixels
+* Integer height - height of the render canvas in pixels
+*/
 function getRayTextures(rays, samplesize, gpgpu, width, height){
     
     var  rayOrigins    = new Float32Array( rays.length * rays[0].length * samplesize * 4 );
